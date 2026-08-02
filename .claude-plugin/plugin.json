@@ -1,0 +1,17 @@
+{
+  "name": "dev-skills",
+  "version": "1.0.0",
+  "description": "An engineering workflow for Claude Code. One idea goes in; a reviewed, integrated commit comes out.",
+  "author": {
+    "name": "bmox0"
+  },
+  "repository": "https://github.com/bmox0/dev-skills",
+  "license": "MIT",
+  "keywords": [
+    "workflow",
+    "planning",
+    "tdd",
+    "code-review",
+    "skills"
+  ]
+}

@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# Everything mechanical that must hold before the first phase is dispatched.
+# Reports; fixes only what is unambiguous (the .gitignore line, the .ai-workflow
+# symlink in a worktree). Judgement calls are reported and left to the skill.
+#
+# The runnability half is why this exists at all: a fresh worktree has no
+# installed dependencies and none of the untracked local files the project
+# needs. Without bootstrap and link, both gates that need a live system walk
+# into a tree that cannot start — and they walk into it after every line of code
+# is already written.
+#
+# Usage: preflight [PLAN_FILE]
+# Exit:  0 clean · 1 findings printed · 2 not a git repository
+set -uo pipefail
+
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not a git repository" >&2; exit 2; }
+gitdir="$(git rev-parse --git-dir 2>/dev/null)"
+common="$(git rev-parse --git-common-dir 2>/dev/null)"
+
+findings=()
+add() { findings+=("$1"); }
+
+# --- an operation left half-done ------------------------------------------
+[ -f "$gitdir/MERGE_HEAD" ]       && add "merge in progress — finish or abort it first"
+[ -d "$gitdir/rebase-merge" ] || [ -d "$gitdir/rebase-apply" ] \
+                                  && add "rebase in progress — finish or abort it first"
+[ -f "$gitdir/CHERRY_PICK_HEAD" ] && add "cherry-pick in progress — finish or abort it"
+[ -f "$gitdir/REVERT_HEAD" ]      && add "revert in progress — finish or abort it"
+[ -f "$gitdir/BISECT_LOG" ]       && add "bisect in progress — 'git bisect reset' first"
+
+# --- where the work will land ---------------------------------------------
+branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+def="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##')"
+if [ -z "$def" ]; then
+  if   git show-ref --verify --quiet refs/heads/main;   then def="main"
+  elif git show-ref --verify --quiet refs/heads/master; then def="master"
+  fi
+fi
+[ "$branch" = "HEAD" ] && add "detached HEAD — commits here belong to no branch"
+[ -n "$def" ] && [ "$branch" = "$def" ] \
+  && add "on the default branch ($def) — execution needs its own branch or worktree"
+
+staged="$(git diff --cached --name-only 2>/dev/null | wc -l | tr -d ' ')"
+unstaged="$(git diff --name-only 2>/dev/null | wc -l | tr -d ' ')"
+if [ "${staged:-0}" -gt 0 ] || [ "${unstaged:-0}" -gt 0 ]; then
+  add "uncommitted changes (${staged} staged, ${unstaged} unstaged) — they will land in the run's commits"
+fi
+
+# --- how far the base has moved -------------------------------------------
+if [ -n "$def" ] && git rev-parse --verify --quiet "origin/$def" >/dev/null 2>&1; then
+  mb="$(git merge-base HEAD "origin/$def" 2>/dev/null || true)"
+  if [ -n "$mb" ]; then
+    behind="$(git rev-list --count "${mb}..origin/${def}" 2>/dev/null || echo 0)"
+    [ "${behind:-0}" -gt 0 ] \
+      && add "origin/${def} moved ${behind} commit(s) since this point (local refs, not fetched)"
+  fi
+fi
+
+# --- the artifacts have to be reachable and ignored ------------------------
+ignore="$root/.gitignore"
+if [ ! -f "$ignore" ] || ! grep -qxF '.ai-workflow' "$ignore"; then
+  printf '.ai-workflow\n' >> "$ignore"
+  echo "fixed: added '.ai-workflow' to .gitignore (no trailing slash — it is a symlink in a worktree)"
+fi
+
+if [ "$gitdir" != "$common" ] && [ ! -e "$root/.ai-workflow" ]; then
+  main_checkout="$(cd "$common/.." 2>/dev/null && pwd -P || true)"
+  if [ -n "$main_checkout" ] && [ -d "$main_checkout/.ai-workflow" ]; then
+    ln -s "$main_checkout/.ai-workflow" "$root/.ai-workflow"
+    echo "fixed: linked .ai-workflow -> $main_checkout/.ai-workflow"
+  else
+    add "this is a worktree and .ai-workflow is missing, with no source to link from"
+  fi
+fi
+
+# --- the tree has to be able to run ---------------------------------------
+contract=""
+for f in "$root/CLAUDE.md" "$root/AGENTS.md"; do
+  [ -f "$f" ] && contract="$f" && break
+done
+if [ -z "$contract" ]; then
+  add "no CLAUDE.md — the environment contract has nowhere to live; ask once and write it"
+else
+  grep -qiE '^\*\*bootstrap' "$contract" || add "no 'bootstrap' field in $(basename "$contract") — ask how a fresh tree is prepared, then record it"
+  grep -qiE '^\*\*link'      "$contract" || add "no 'link' field in $(basename "$contract") — ask which untracked paths to symlink (default .env*), then record it"
+fi
+
+# --- the plan has to exist ------------------------------------------------
+if [ $# -ge 1 ]; then
+  [ -f "$1" ] || add "no such plan file: $1"
+fi
+
+echo "tree: ${root}"
+echo "branch: ${branch}${def:+ (default: ${def})}"
+if [ ${#findings[@]} -eq 0 ]; then
+  echo "preflight clean"
+  exit 0
+fi
+for f in "${findings[@]}"; do printf '  - %s\n' "$f"; done
+exit 1

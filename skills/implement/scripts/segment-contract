@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# Assemble a segment's output contract: the union of the "Frozen for later
+# phases" fields of its phases. Print it, or write it to a file.
+#
+# This is what a checkpoint reviewer may not change with an ordinary finding —
+# later phases have already been briefed against these names, signatures and
+# shapes, so renaming one leaves the next implementer hunting for an abstraction
+# that no longer exists. Needing one changed is a PLAN_CONFLICT, not a finding.
+#
+# Nothing extra is written in the plan for this: the contract is derived from
+# fields the phases carry anyway. A separate section would be a second copy and
+# would diverge at the first correction.
+#
+# Usage: segment-contract PLAN_FILE RANGE [OUTFILE]
+#   RANGE   a single phase (3) or an inclusive span (2-4)
+set -euo pipefail
+
+if [ $# -lt 2 ] || [ $# -gt 3 ]; then
+  echo "usage: segment-contract PLAN_FILE RANGE [OUTFILE]" >&2
+  exit 2
+fi
+
+plan=$1
+range=$2
+[ -f "$plan" ] || { echo "no such plan file: $plan" >&2; exit 2; }
+
+case "$range" in
+  *[0-9]-[0-9]*) first=${range%%-*}; last=${range##*-} ;;
+  *[!0-9]*)      echo "bad RANGE: $range (want 3 or 2-4)" >&2; exit 2 ;;
+  *)             first=$range; last=$range ;;
+esac
+[ "$first" -le "$last" ] 2>/dev/null || { echo "bad RANGE: $range" >&2; exit 2; }
+
+body=$(awk -v first="$first" -v last="$last" '
+  /^```/ { fence = !fence }
+
+  !fence && /^###[ \t]+Phase[ \t]+[0-9]+/ {
+    n = $0; sub(/^###[ \t]+Phase[ \t]+/, "", n); sub(/[^0-9].*$/, "", n)
+    inseg = (n + 0 >= first && n + 0 <= last)
+    title = $0; sub(/^###[ \t]+/, "", title)
+    infield = 0
+    next
+  }
+
+  !fence && /^\*\*[A-Z]/ {
+    infield = (inseg && $0 ~ /^\*\*Frozen for later phases\*\*/)
+    if (infield) printed_title = 0
+    next
+  }
+
+  infield {
+    if ($0 ~ /^[ \t]*$/) next
+    if ($0 ~ /^[ \t]*-[ \t]*—[ \t]*$/) next
+    if (!printed_title) { print "## " title; printed_title = 1 }
+    print
+  }
+' "$plan")
+
+if [ -z "$body" ]; then
+  body="No phase in ${first}-${last} freezes anything for later phases.
+Nothing in this segment is off limits to ordinary findings."
+fi
+
+out_text="# Output contract — phases ${first}-${last}
+
+Names, signatures and data shapes that later phases were briefed against. A
+review may not change these with an ordinary finding; needing one changed is a
+PLAN_CONFLICT and escalates.
+
+${body}"
+
+if [ $# -eq 3 ]; then
+  printf '%s\n' "$out_text" > "$3"
+  echo "wrote $3"
+else
+  printf '%s\n' "$out_text"
+fi

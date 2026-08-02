@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# Cut one segment out of a plan into the file its implementer reads in a single
+# call, so plan text never passes through the orchestrator's context.
+#
+# A brief is the plan's header (everything above "## Phases") plus the phases of
+# this segment, verbatim. Other phases are deliberately left out: they fill a
+# weak model's context and invite work outside its bounds. What is shared lives
+# in the header, in one copy.
+#
+# The phase subheadings are fixed strings for exactly this reason — the cut is
+# mechanical and needs stable anchors.
+#
+# Usage: segment-brief PLAN_FILE RANGE [OUTFILE]
+#   RANGE   a single phase (3) or an inclusive span (2-4)
+# Default OUTFILE: <workspace>/segment-<range>-brief.md
+set -euo pipefail
+
+if [ $# -lt 2 ] || [ $# -gt 3 ]; then
+  echo "usage: segment-brief PLAN_FILE RANGE [OUTFILE]" >&2
+  exit 2
+fi
+
+plan=$1
+range=$2
+[ -f "$plan" ] || { echo "no such plan file: $plan" >&2; exit 2; }
+
+case "$range" in
+  *[0-9]-[0-9]*) first=${range%%-*}; last=${range##*-} ;;
+  *[!0-9]*)      echo "bad RANGE: $range (want 3 or 2-4)" >&2; exit 2 ;;
+  *)             first=$range; last=$range ;;
+esac
+[ "$first" -le "$last" ] 2>/dev/null || { echo "bad RANGE: $range" >&2; exit 2; }
+
+if [ $# -eq 3 ]; then
+  out=$3
+else
+  dir=$("$(cd "$(dirname "$0")" && pwd)/workspace" "$plan")
+  out="$dir/segment-${first}-${last}-brief.md"
+fi
+
+awk -v first="$first" -v last="$last" '
+  /^```/ { fence = !fence }
+  fence { if (emit || header) print; next }
+
+  /^##[ \t]+Phases[ \t]*$/ { inphases = 1; header = 0; next }
+
+  # A phase heading decides whether the following lines belong to this segment.
+  /^###[ \t]+Phase[ \t]+[0-9]+/ {
+    n = $0; sub(/^###[ \t]+Phase[ \t]+/, "", n); sub(/[^0-9].*$/, "", n)
+    emit = (n + 0 >= first && n + 0 <= last)
+    if (emit) print
+    next
+  }
+
+  # Anything after the phases that is not a phase ends the cut.
+  inphases && /^##[ \t]+/ { emit = 0; next }
+
+  header { print; next }
+  emit { print }
+
+  BEGIN { header = 1 }
+' "$plan" > "$out"
+
+if ! grep -qE '^###[ \t]+Phase[ \t]+' "$out"; then
+  echo "no phase in range ${first}-${last} found in ${plan}" >&2
+  exit 3
+fi
+
+missing=""
+for field in "Becomes true" "Changes" "How" "Do not touch" \
+             "Frozen for later phases" "Verification" "Steps"; do
+  grep -qF "**${field}**" "$out" || missing="${missing}${missing:+, }${field}"
+done
+if [ -n "$missing" ]; then
+  echo "warning: no phase in this brief carries: ${missing}" >&2
+fi
+
+echo "wrote ${out}: $(wc -l < "$out" | tr -d ' ') lines"
