@@ -49,6 +49,11 @@ the implementer is excused from reporting numbers. When they come back red, do
 not debug them — stack traces and build noise are not your work. Hand the segment
 back.
 
+Where the brief predicts a count, do not read it off the implementer's report
+either — re-derive it yourself, the same way you re-run the tests. Report the
+number you get; the brief's number was measured earlier and may be stale by
+the time you check it.
+
 ## Reading the diff
 
 Judge against the **fields** of the phases: *Becomes true*, *Changes*, *How*,

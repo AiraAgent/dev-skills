@@ -1,0 +1,441 @@
+#!/usr/bin/env python3
+"""Derive a segment's dispatch and write it to a file — never to stdout.
+
+A dispatch is ~1200 words, most of it mechanical: where the segment sits, the
+brief path, what earlier segments built, the report path, the model. Typed by
+hand it lands in the orchestrator's context and is re-read every turn for the
+rest of the run. This script derives the mechanical part and writes it to a
+file; the orchestrator hands a subagent the *path*, the way segment-brief
+already hands over a brief.
+
+Printing the dispatch body to stdout would defeat the purpose — the
+orchestrator would read it once to build the file and again because it is
+still sitting in the terminal output. So: stdout gets exactly one line, the
+output path and how many holes remain. Everything else lives in the file.
+
+Per-run invariants — the fact/decision protocol, git staging discipline,
+never-amend, the report contract, the reviewer's order of work — are not
+reproduced here. They live in agents/implementer.md and
+agents/implement-review.md, which each dispatched subagent reads as its own
+system prompt. This script only points at that file by name.
+
+Anything this script cannot derive becomes a visible `<<< FILL: ... >>>`
+marker, phrased as a question — never a guess, never a blank that invites
+skipping. The file opens with a header naming how many such markers it
+contains, so the agent that reads it (which has to read it anyway) can refuse
+to proceed on an incomplete dispatch without relying on the orchestrator to
+remember to check.
+
+Usage: segment-dispatch PLAN_FILE RANGE [--reviewer] [--force]
+  RANGE   a single phase (3) or an inclusive span (2-4), as segment-brief takes
+"""
+
+import os
+import re
+import subprocess
+import sys
+
+PROG = "segment-dispatch"
+HERE = os.path.dirname(os.path.abspath(__file__))
+SKILLS_DIR = os.path.dirname(os.path.dirname(HERE))  # .../skills
+PLUGIN_ROOT = os.path.dirname(SKILLS_DIR)  # .../dev-skills
+
+FILL = "<<< FILL"  # the marker's fixed prefix; every hole starts with it
+
+
+def die(msg, code=1):
+    sys.stderr.write("%s: %s\n" % (PROG, msg))
+    raise SystemExit(code)
+
+
+def indent(text, prefix="  "):
+    return "\n".join(prefix + line for line in text.splitlines())
+
+
+def run_sibling(name, *args):
+    """A sibling script's stdout. Any nonzero exit dies here, surfacing its
+    stderr in full — a failure must never become a confident negative."""
+    path = os.path.join(HERE, name)
+    try:
+        proc = subprocess.run([path, *args], capture_output=True, text=True)
+    except OSError as exc:
+        die("cannot run %s: %s\n  it should sit beside this script in %s"
+            % (name, exc, HERE), 2)
+    if proc.returncode != 0:
+        die("%s %s failed (exit %d):\n%s"
+            % (name, " ".join(args), proc.returncode,
+               indent(proc.stderr.strip() or "(no stderr)")))
+    return proc.stdout
+
+
+def parse_range(raw):
+    m = re.fullmatch(r"(\d+)-(\d+)", raw)
+    if m:
+        first, last = int(m.group(1)), int(m.group(2))
+    elif re.fullmatch(r"\d+", raw):
+        first = last = int(raw)
+    else:
+        die("bad RANGE: %s (want 3 or 2-4)" % raw, 2)
+    if first > last:
+        die("bad RANGE: %s (want 3 or 2-4)" % raw, 2)
+    return first, last
+
+
+# ---------------------------------------------------------------------------
+# Topology: parse only the first markdown table under "## Topology", fence-
+# aware, and stop at the section's end (the next "##" heading). A related tool
+# absorbed every table in the section, which let an unrelated second table be
+# read as segment rows. The real plan has one table; this is written to be
+# correct even so.
+
+HEADING2_RE = re.compile(r"^##[ \t]+(.+?)[ \t]*$")
+FENCE_RE = re.compile(r"^```")
+
+
+class Segment:
+    def __init__(self, n, phases_raw, first, last, model, why):
+        self.n = n
+        self.phases_raw = phases_raw
+        self.first = first
+        self.last = last
+        self.model = model
+        self.why = why
+
+
+def split_row(line):
+    s = line.strip()
+    if s.startswith("|"):
+        s = s[1:]
+    if s.endswith("|"):
+        s = s[:-1]
+    return [c.strip() for c in s.split("|")]
+
+
+def is_separator(cells):
+    return all(re.fullmatch(r"[:\-\s]*", c) for c in cells)
+
+
+def parse_table(table_lines):
+    if not table_lines:
+        return []
+    rows = [split_row(l) for l in table_lines]
+    header = rows[0]
+    body = [r for r in rows[1:] if not is_separator(r)]
+
+    def col(*names):
+        for i, cell in enumerate(header):
+            low = cell.strip().lower()
+            if any(n in low for n in names):
+                return i
+        return None
+
+    seg_i, phase_i, model_i, why_i = (
+        col("segment"), col("phase"), col("implementer"), col("why"))
+    if None in (seg_i, phase_i, model_i, why_i):
+        die("the Topology table is missing an expected column "
+            "(Segment, Phases, Implementer, Why the checkpoint is here); "
+            "header found: %s" % header, 3)
+
+    segments = []
+    for r in body:
+        width = max(seg_i, phase_i, model_i, why_i)
+        if len(r) <= width:
+            continue
+        seg_nums = re.findall(r"\d+", r[seg_i])
+        phase_nums = [int(x) for x in re.findall(r"\d+", r[phase_i])]
+        if not seg_nums or not phase_nums:
+            continue
+        segments.append(Segment(
+            int(seg_nums[0]), r[phase_i].strip(),
+            min(phase_nums), max(phase_nums),
+            r[model_i].strip(), r[why_i].strip()))
+    return segments
+
+
+def topology_segments(lines):
+    """Segments from the plan's '## Topology' table, or None if the plan has
+    no such section at all (distinct from an empty/malformed one)."""
+    in_fence = False
+    in_topology = False
+    found_section = False
+    table_lines = []
+    started = False
+    ended = False
+
+    for line in lines:
+        if FENCE_RE.match(line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+
+        h2 = HEADING2_RE.match(line)
+        if h2:
+            if in_topology:
+                break  # the next level-2 heading ends the Topology section
+            if h2.group(1).strip().lower() == "topology":
+                in_topology = True
+                found_section = True
+            continue
+
+        if not in_topology or ended:
+            continue
+
+        stripped = line.strip()
+        if stripped.startswith("|"):
+            table_lines.append(stripped)
+            started = True
+        elif started:
+            ended = True  # first table is done; anything after is ignored
+
+    if not found_section:
+        return None
+    return parse_table(table_lines)
+
+
+def find_owner(segments, first, last):
+    """(owner, None) on an exact match; (None, spanning) when the requested
+    range overlaps more than one segment; (None, []) when nothing covers it."""
+    exact = [s for s in segments if s.first == first and s.last == last]
+    if exact:
+        return exact[0], None
+    overlapping = [s for s in segments if not (s.last < first or s.first > last)]
+    if len(overlapping) > 1:
+        return None, overlapping
+    return None, []
+
+
+# ---------------------------------------------------------------------------
+# Holes — phrased as questions, never a blank.
+
+def hole(question):
+    return "%s: %s >>>" % (FILL, question)
+
+
+CORRECTED_HOLE = hole(
+    "Which fields of this segment's brief were corrected, by name? (The "
+    "content already lives in the brief, marked [CORRECTED] — name the "
+    "fields here, do not restate what they say.) Say \"none\" if nothing in "
+    "this brief was corrected.")
+
+WARNING_HOLE = hole(
+    "Is there anything specific to this segment worth calling out before "
+    "work starts — a sharp edge, a step more fragile than it reads, a place "
+    "an earlier segment nearly went wrong? Say \"none\" if there is nothing.")
+
+TDD_HOLE = hole(
+    "Does this segment write tests? Check the Verification field of each "
+    "phase in the brief above. If yes, name dev-skills:tdd here as the "
+    "implementer's test discipline; if no, say so explicitly rather than "
+    "leaving the question unanswered.")
+
+
+def commit_range_hole(plan_abs):
+    return hole(
+        "What are the BASE and HEAD commits of the range under review? "
+        "Run `%s %s <BASE> <HEAD>` with them to produce the review package, "
+        "then put the path it prints in place of this line."
+        % (os.path.join(HERE, "review-package"), plan_abs))
+
+
+# ---------------------------------------------------------------------------
+
+def find_criteria():
+    base = os.path.join(SKILLS_DIR, "review-criteria")
+    for candidate in (os.path.join(base, "CRITERIA.md"),
+                      os.path.join(base, "references", "CRITERIA.md")):
+        if os.path.isfile(candidate):
+            return candidate
+    for dirpath, _dirs, names in os.walk(base):
+        if "CRITERIA.md" in names:
+            return os.path.join(dirpath, "CRITERIA.md")
+    return None
+
+
+def extract_written_path(brief_stdout):
+    """segment-brief prints 'wrote <path>: N lines' on success."""
+    m = re.search(r"^wrote (.+): \d+ lines$", brief_stdout.strip(), re.MULTILINE)
+    if not m:
+        die("segment-brief produced unexpected output:\n%s"
+            % indent(brief_stdout.strip() or "(empty)"))
+    return m.group(1)
+
+
+def build_implementer_body(plan, first, last, rng, owner, workspace, agent_file):
+    brief_path = extract_written_path(run_sibling("segment-brief", plan, rng))
+    report_path = os.path.join(workspace, "segment-%d-report.md" % owner.n)
+
+    if first == 1:
+        built_text = (
+            "Nothing precedes this segment; no earlier contract binds it. "
+            "This is derived from the range — its first phase is 1 — not "
+            "from a failed lookup. segment-contract --built was not run.")
+    else:
+        prior_range = "1-%d" % (first - 1)
+        built_text = run_sibling(
+            "segment-contract", "--built", plan, prior_range).strip()
+
+    parts = [
+        "# Implementer dispatch — segment %d (phases %s)" % (owner.n, owner.phases_raw),
+        "",
+        "## Where this segment sits",
+        "Segment %d of this run, phases %s. Model: %s."
+        % (owner.n, owner.phases_raw, owner.model),
+        "Checkpoint here because: %s" % owner.why,
+        "",
+        "## Brief",
+        "Read this first, in full:",
+        brief_path,
+        "",
+        "## What already exists",
+        built_text,
+        "",
+        "## Report",
+        "Write the full report to:",
+        report_path,
+        "",
+        "## Corrections",
+        CORRECTED_HOLE,
+        "",
+        "## Segment-specific warning",
+        WARNING_HOLE,
+        "",
+        "## Tests",
+        TDD_HOLE,
+        "",
+        "## Everything else",
+        "The fact/decision protocol, git staging discipline, never-amend, "
+        "the report contract and the return format are already in this "
+        "agent's own definition:",
+        agent_file,
+        "Nothing above restates them. Do not restate them back either.",
+    ]
+    return "\n".join(parts) + "\n"
+
+
+def build_reviewer_body(plan, first, last, rng, owner, workspace, agent_file):
+    brief_path = extract_written_path(run_sibling("segment-brief", plan, rng))
+    report_path = os.path.join(workspace, "segment-%d-report.md" % owner.n)
+
+    contract_path = os.path.join(workspace, "segment-%s-contract.md" % rng)
+    run_sibling("segment-contract", plan, rng, contract_path)
+
+    criteria_path = find_criteria()
+    if not criteria_path:
+        die("cannot find CRITERIA.md under %s"
+            % os.path.join(SKILLS_DIR, "review-criteria"))
+
+    parts = [
+        "# Reviewer dispatch — segment %d (phases %s)" % (owner.n, owner.phases_raw),
+        "",
+        "## Brief",
+        brief_path,
+        "",
+        "## Implementer's report",
+        report_path,
+        "",
+        "## Review package",
+        commit_range_hole(plan),
+        "",
+        "## Segment contract",
+        contract_path,
+        "",
+        "## Review criteria",
+        criteria_path,
+        "",
+        "## Corrections",
+        CORRECTED_HOLE,
+        "",
+        "## Segment-specific warning",
+        WARNING_HOLE,
+        "",
+        "## Everything else",
+        "The order of work — path comparison, then the checks, then the "
+        "diff — the report contract and the fix-round behaviour are already "
+        "in this agent's own definition:",
+        agent_file,
+        "Nothing above restates them. Do not restate them back either.",
+    ]
+    return "\n".join(parts) + "\n"
+
+
+HEADER_TMPL = """This file contains %d `%s` marker%s.
+
+If you find any `%s` marker anywhere in this file, **stop and tell the
+orchestrator its dispatch is incomplete.** Do not guess what belongs there
+and do not proceed on the rest.
+
+---
+
+"""
+
+
+def main():
+    argv = sys.argv[1:]
+    reviewer = "--reviewer" in argv
+    force = "--force" in argv
+    positional = [a for a in argv if a not in ("--reviewer", "--force")]
+    if len(positional) != 2:
+        die("usage: segment-dispatch PLAN_FILE RANGE [--reviewer] [--force]", 2)
+
+    plan_arg, range_arg = positional
+    plan = os.path.abspath(plan_arg)
+    if not os.path.isfile(plan):
+        die("no such plan file: %s" % plan_arg, 2)
+
+    first, last = parse_range(range_arg)
+    rng = "%d-%d" % (first, last)
+
+    with open(plan, "r", encoding="utf-8") as fh:
+        lines = fh.read().splitlines()
+
+    segments = topology_segments(lines)
+    if segments is None:
+        die("no '## Topology' section in %s\n  the model per segment and the "
+            "checkpoint's reason live in that table; without it there is "
+            "nothing to dispatch against" % plan, 3)
+
+    owner, spanning = find_owner(segments, first, last)
+    if owner is None:
+        if spanning:
+            names = ", ".join(
+                "segment %d (phases %s)" % (s.n, s.phases_raw) for s in spanning)
+            die("phases %s span more than one Topology segment: %s\n  "
+                "dispatch one Topology segment at a time" % (rng, names), 3)
+        existing = ", ".join(
+            "segment %d: phases %s" % (s.n, s.phases_raw) for s in segments)
+        die("no Topology row covers phases %s exactly.\n  rows in %s: %s"
+            % (rng, plan, existing or "(none)"), 3)
+
+    workspace = run_sibling("workspace", plan).strip()
+    if not workspace:
+        die("workspace produced no output for %s" % plan)
+
+    suffix = "review-dispatch" if reviewer else "dispatch"
+    out_path = os.path.join(workspace, "segment-%s-%s.md" % (rng, suffix))
+    if os.path.exists(out_path) and not force:
+        die("output file already exists: %s\n  the orchestrator may have "
+            "already filled its holes; pass --force to overwrite anyway"
+            % out_path, 4)
+
+    agent_name = "implement-review" if reviewer else "implementer"
+    agent_file = os.path.join(PLUGIN_ROOT, "agents", "%s.md" % agent_name)
+
+    if reviewer:
+        body = build_reviewer_body(plan, first, last, rng, owner, workspace, agent_file)
+    else:
+        body = build_implementer_body(plan, first, last, rng, owner, workspace, agent_file)
+
+    hole_count = body.count(FILL)
+    header = HEADER_TMPL % (
+        hole_count, FILL, "" if hole_count == 1 else "s", FILL)
+
+    with open(out_path, "w", encoding="utf-8") as fh:
+        fh.write(header + body)
+
+    print("wrote %s: %d hole%s to fill"
+          % (out_path, hole_count, "" if hole_count == 1 else "s"))
+
+
+if __name__ == "__main__":
+    main()

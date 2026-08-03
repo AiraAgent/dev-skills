@@ -21,6 +21,20 @@ set -euo pipefail
 
 RECOVERY_REF=refs/finish/recovery
 
+# commit-guard's own subject rule, copied deliberately.
+#
+# The hook reads the *command string*, so it validates `git commit -m "…"` and
+# cannot see a message passed with -F. `finish squash` uses -F, which makes the
+# run's one landing commit the only one in the whole run that reaches git
+# unchecked — both for the subject and for the banned trailers. Checking here is
+# what closes that, and it happens before `reset --soft` so a refusal costs
+# nothing and leaves the branch untouched.
+#
+# If commit-guard's rule changes, change this one with it; they are two copies of
+# one decision and there is no way to share them across a hook and a script.
+CONVENTIONAL='^(([A-Z][A-Z0-9]*-[0-9]+|#[0-9]+):?[[:space:]]+)?(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._/-]+\))?!?: .+'
+BANNED_TRAILERS='Co-Authored-By|Generated with Claude Code|Claude-Session:|🤖'
+
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not a git repository" >&2; exit 2; }
 gitdir="$(git rev-parse --git-dir)"
 common="$(git rev-parse --git-common-dir)"
@@ -111,10 +125,33 @@ cmd_preflight() {
   echo "preflight clean"
 }
 
+# Enforced before anything is moved, so a bad subject costs a refusal rather than
+# a reset --soft the caller then has to unpick.
+assert_message_ok() {
+  local msgfile subject
+  msgfile="$1"
+  subject="$(grep -vE '^[[:space:]]*#' "$msgfile" | grep -vE '^[[:space:]]*$' | head -1)"
+  [ -n "$subject" ] || die "$msgfile has no subject line"
+
+  if printf '%s' "$subject" | grep -qE '<type>|<scope>|<one line'; then
+    die "the subject line in $msgfile is still the placeholder — write the real one"
+  fi
+  if ! printf '%s' "$subject" | grep -qE "$CONVENTIONAL"; then
+    die "subject is not Conventional Commits ('$subject')
+  use 'type(scope): summary'; type in feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert
+  commit-guard cannot see a -F message, so this is the only place it is checked"
+  fi
+  if grep -qiE "$BANNED_TRAILERS" "$msgfile"; then
+    die "$msgfile carries a banned trailer (Co-Authored-By / Generated with Claude Code / Claude-Session)
+  remove it; commit-guard cannot see a -F message and would not have caught this"
+  fi
+}
+
 cmd_squash() {
   local msgfile base before after old_recovery
   msgfile="${1:-}"
   [ -n "$msgfile" ] && [ -f "$msgfile" ] || die "usage: finish squash MESSAGE_FILE"
+  assert_message_ok "$msgfile"
 
   cmd_preflight >/dev/null
   resolve_marker
@@ -128,7 +165,7 @@ cmd_squash() {
   echo "recovery ref: $RECOVERY_REF -> $(git rev-parse --short HEAD)"
 
   git reset --soft "$base"
-  git commit -F "$msgfile" --quiet
+  git commit --cleanup=strip -F "$msgfile" --quiet
 
   after="$(git rev-parse 'HEAD^{tree}')"
   if [ "$before" != "$after" ]; then

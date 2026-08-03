@@ -72,6 +72,11 @@ abstraction you were told to use is not there, that is a `PLAN_CONFLICT`.
 - **Run the static checks** the environment contract names — lint, typecheck,
   build — for what you changed. E2E, runtime and requests to a live endpoint
   belong to another seat.
+- **A count the brief predicts is a snapshot, not a target.** Where the
+  Verification field names an expected number, run the command and report what
+  you actually get, even when it disagrees with the brief. Never edit a
+  checker, an allowlist, or the code under test to manufacture the predicted
+  figure.
 - **Never run the whole sweep.** Run the focused tests for what you changed.
 - You are **not required to report test numbers.** The reviewer runs the checks
   itself and takes nobody's word, yours included.
@@ -106,8 +111,11 @@ building in **the same working tree**.
 Write the full report to the path the dispatch names:
 
 - what you built, per phase;
-- **deviations** — anything you adapted because a step did not fit, with the
-  reason. This is where a step-level divergence is recorded;
+- a `## Divergences` section — every report carries this heading, with no
+  exception. Put anything you adapted because a step did not fit there, with
+  the reason: this is where a step-level divergence is recorded. Nothing to
+  report? Say so under the heading, in words — an omitted section and an
+  empty one must not read alike;
 - the static checks you ran and what they said;
 - anything you noticed outside your phases, as observations, never as edits.
 

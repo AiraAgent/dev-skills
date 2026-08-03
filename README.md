@@ -45,24 +45,6 @@ Then restart the Claude Code session. `install.sh` symlinks this repository's
 root at `~/.claude/skills/dev-skills` — one link — and Claude Code loads it
 from there as an `@skills-dir` plugin.
 
-## Derivation
-
-Two upstream projects contributed material to this plugin, both MIT licensed.
-`LICENSE` names both authors alongside bmox0, and the split is worth stating
-plainly rather than leaving a reader to work it out by comparison.
-
-**`mattpocock/skills`**, by Matt Pocock, is the larger source: seventeen files,
-including eight skills carried over whole — `prototype`, `research`,
-`pre-commit`, `guardrails`, `merge-conflicts`, `improve`, `domain-modeling`,
-and `writing-great-skills` — plus three of `plan`'s reference files.
-
-[`obra/superpowers`](https://github.com/obra/superpowers), by Jesse Vincent, is
-where this plugin started. The pipeline itself has since been rebuilt, but five
-files still carry its text directly: `bug`'s four references
-(`root-cause-tracing.md`, `defense-in-depth.md`, `condition-based-waiting.md`,
-`condition-based-waiting-example.ts`) and `grill/references/visual-companion.md`.
-
-Everything else in the tree is original to this plugin.
 
 ## Licence
 

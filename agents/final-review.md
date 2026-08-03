@@ -43,6 +43,11 @@ Run **the scenarios**, in order, as written. Report what you saw — not a test'
 opinion of it. Front end: open it. Back end: send the request. Mobile: build it
 and drive it. No test suite is not permission to look at nothing.
 
+**A scenario's stated number can itself be stale, or wrong.** Report what you
+observed, not what the scenario names, and mark it failed rather than pass it
+on a technicality. Say plainly which you think is at fault — the system or the
+scenario — and leave the call to the human at GATE 1.
+
 If the tree will not start, apply `link` and run `bootstrap` first. If it still
 will not start, that is your first finding and it blocks the rest — stop there.
 

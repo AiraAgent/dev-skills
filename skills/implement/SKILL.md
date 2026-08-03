@@ -131,17 +131,53 @@ record BASE (git rev-parse HEAD)
 Everything you paste into a dispatch stays in your context for the rest of the
 session and is re-read every turn afterwards. **Hand over paths, never contents.**
 
-The implementer gets:
+**An instruction that is the same for every segment belongs in the agent
+definition, not in fifteen copies of the dispatch.** The fact/decision protocol
+(an actor returns the observation and stops — it never classifies or
+improvises), git staging discipline (stage only what you changed yourself;
+`commit-guard` refuses `git add -A`, `git add .` and `git commit -a`),
+never-`amend`, the report contract, the split between what is returned to you
+and what goes in the report file, and — for the reviewer — running the checks
+itself before any code is read, are already stated in the agent definitions
+each dispatched agent reads as its own system prompt: `agents/implementer.md`,
+`agents/implement-review.md`, `agents/final-review.md`. Do not restate any of
+it — a dispatch that repeats it pays twice for something the agent already
+knows.
+
+What goes in the dispatch is what varies per segment. The implementer gets:
 
 1. one line on where this segment sits in the project;
-2. the **brief path**, introduced as "read this first — it is your requirements";
+2. the **brief path** — the agent definition already treats it as the first
+   thing to read, in full;
 3. **what already exists** — the contracts closed by earlier segments: what was
    planned and what was actually built. Mandatory: dependency between phases is
-   the norm, and without it the implementer goes digging through diffs;
+   the norm, and without it the implementer goes digging through diffs.
+   `scripts/segment-contract --built` produces both halves in one call;
 4. the instruction to use **`dev-skills:tdd`**, if the plan says this segment has tests —
    it is a skill the implementer invokes, not a path you resolve;
-5. the **report file path** and the report contract;
-6. your resolution of any ambiguity you spotted in the brief.
+5. the **report file path** — its contents and the short return format are the
+   agent definition's contract, not yours to restate;
+6. **which fields of the brief you corrected — by name, not by content.**
+
+Item 6 is where the rule above is easiest to break. A correction you made lives
+in the plan and reaches the implementer through the brief it is about to read;
+restating it in the dispatch writes it twice, and the second copy is the
+expensive one — it sits in your context and is re-read every turn until the run
+ends. "It matters, they might miss it" is the reasoning, and the answer to it is
+a pointer, not a paste:
+
+```text
+✗  "R3's count after phase 2 is 120, not 124. Four of the six diagnose
+    findings live inside the files phase 2 deletes, so 116 ds-* + 4 bare
+    names = 120. The four survivors are …"          ~40 lines, forever
+
+✓  "I corrected four things in this brief: phase 2's R3 count, phase 3's
+    Changes field, the commit-work README link, and the ds-finish script
+    rename. Each is marked [CORRECTED] where it lands. Read them."
+```
+
+If a correction is too subtle to survive being read in place, the fix belongs in
+the phase's wording, not in a louder dispatch.
 
 The reviewer gets: the same brief path, the report, the review package, the
 segment contract, and the path to the review criteria
@@ -149,12 +185,20 @@ segment contract, and the path to the review criteria
 the absolute path).
 
 **No agent definition carries a filesystem path.** You resolve every path and put
-it in the dispatch. An agent that was not given a path it needs stops and says so
-rather than going looking.
+it in the dispatch — each agent definition already says it stops rather than
+goes looking for one it was not given.
 
 **Name the model on the dispatch** — the one the plan's topology assigns to this
 segment. Omit it and the dispatch inherits this session's model, which is the
 most expensive one available.
+
+`scripts/segment-dispatch <plan> <range> [--reviewer]` derives everything above
+that is mechanical and writes it to a file — it never prints the dispatch body,
+only the path and how many holes remain. What it cannot derive — corrections by
+name, a segment-specific warning, whether this segment writes tests, and for
+`--reviewer` the review range's BASE and HEAD — comes back as a visible
+`<<< FILL: ... >>>` marker. Fill every one before handing the path over; a
+dispatch with a marker still in it is not ready, whatever else it says.
 
 ### The three seats
 
@@ -293,6 +337,20 @@ touched.
 
 Writing the correction into the plan is not optional. The plan is a ledger; the
 human reads it at the gates, and an unrecorded correction vanishes.
+
+**It lands in two places, and one of them is not optional either:**
+
+- **the field of the phase it changes** — that is the copy an implementer ever
+  sees, because a brief is cut from the phases and the header, and from nothing
+  else;
+- **`## Corrections during execution`**, appended below the phases — that is the
+  copy the human reads at the gates. It is *not* in any brief; a correction
+  recorded only there never reaches the actor that has to act on it.
+
+Correct the plan, then cut the brief. **Never edit a brief in place.** A brief is
+derived: a re-cut after a compaction, a resume or a fix round regenerates it from
+the plan and silently drops anything that lived only in the file. Mark the edited
+field `[CORRECTED]` so the dispatch can point at it by name.
 
 Escalation stops independent parallel segments too. Building further on a plan
 already known to be wrong costs more than waiting.
