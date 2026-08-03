@@ -1,11 +1,90 @@
 # dev-skills
 
-A Claude Code plugin: 23 skills for planning, building, and reviewing software
-work, plus the subagents and guard hooks the pipeline runs on. Each skill
-documents its own use inside its `SKILL.md`; this file covers what the plugin
-is, how to install it, and where its material comes from.
+Claude Code starts writing the moment you describe a task. Most of the time that
+is exactly what you want. The rest of the time what comes back is fluent,
+confident, and built on an understanding of the problem you never agreed to —
+and you find that out after reading the diff.
 
-## Skills
+dev-skills puts a sequence between the idea and the commit. You say what you
+want; it asks questions until you both mean the same thing. That agreement
+becomes a plan you approve before anything is built. The plan is built in
+segments, and every segment is judged by an agent that did not write it. What
+lands is one commit, on its own branch, that you read before it goes anywhere.
+
+## A run, end to end
+
+1. **[`dev-skills:grill`](skills/grill/SKILL.md)** — questions, until the thing
+   you asked for and the thing that was heard are the same thing. No document,
+   no code: it ends in agreement, and then a stop.
+2. **[`dev-skills:plan`](skills/plan/SKILL.md)** — that agreement written down
+   as a contract precise enough for someone who never saw the conversation.
+   You approve it, or you send it back.
+3. **[`dev-skills:implement`](skills/implement/SKILL.md)** — a branch or a
+   worktree first, then one agent per segment to build it and a second, on a
+   clean context, to judge it. The reviewer never fixes anything; it reports,
+   and the segment goes back.
+4. **[`dev-skills:finish`](skills/finish/SKILL.md)** — the run collapses into a
+   single commit, you read it, and it integrates.
+
+Nothing on that list starts by itself. All four are marked
+`disable-model-invocation`, so Claude cannot reach for them: a run begins
+because you typed it, never because something decided your task looked big
+enough to warrant one.
+
+### Other ways in
+
+Not every task is a feature. [`dev-skills:bug`](skills/bug/SKILL.md) reproduces
+a symptom and pins it with a failing test before anyone is allowed to propose a
+fix — the one entry Claude may reach for on its own, because the mistake it
+prevents is made in the first reply.
+[`dev-skills:scout`](skills/scout/SKILL.md) explains unfamiliar code without
+touching it. [`dev-skills:refactor`](skills/refactor/SKILL.md) changes the shape
+of code under a contract that its behaviour does not.
+[`dev-skills:tests`](skills/tests/SKILL.md) is for when the tests are the
+deliverable.
+
+## What it enforces
+
+Discipline a model has to remember is not discipline. Three git hooks run on
+every relevant tool call, whether or not a run is open:
+
+- **Commits.** Blanket staging is refused — `git add .`, `-A` and
+  `git commit -a` all sweep up work nobody looked at, including a file another
+  agent is halfway through. Subjects that are not Conventional Commits are
+  refused too, as are Claude attribution trailers.
+- **History, while a run is open.** `reset --hard`, `rebase`, `merge` and
+  `--amend` belong to [`dev-skills:finish`](skills/finish/SKILL.md), which
+  writes a recovery ref before it touches anything. Outside a run the hook is
+  silent, so ordinary work in ordinary repositories is unaffected.
+- **The default branch.** In a repository carrying a `.branch-guard` file,
+  edits and commits on `main` are blocked until the work is on a branch of its
+  own.
+
+All three fail open: whatever they cannot parse confidently, they allow. A
+guard that blocks the wrong thing is worse than one that misses.
+
+## Install
+
+```
+/plugin marketplace add bmox0/dev-skills
+/plugin install dev-skills@dev-skills
+```
+
+Then restart the session. The repository carries its own
+[`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json), so it is a
+marketplace holding exactly one plugin — itself. Claude Code clones it, keeps it
+current, and `/plugin uninstall dev-skills` takes it back out again.
+
+Installing also brings three subagents — `implementer`, `implement-review` and
+`final-review` — which [`dev-skills:implement`](skills/implement/SKILL.md)
+dispatches and you never call directly, and the hooks above
+([`hooks/hooks.json`](hooks/hooks.json)).
+
+## Every skill
+
+The pipeline is four of these. The rest are things you invoke on their own, or
+that the pipeline reads as it works. Each one documents its own use inside its
+`SKILL.md`.
 
 | Skill | What it's for |
 |---|---|
@@ -32,32 +111,6 @@ is, how to install it, and where its material comes from.
 | [`dev-skills:tdd`](skills/tdd/SKILL.md) | the red-green-refactor discipline the implementer builds by |
 | [`dev-skills:tests`](skills/tests/SKILL.md) | cover untested code, or repair tests that lie |
 | [`dev-skills:writing-great-skills`](skills/writing-great-skills/SKILL.md) | design, audit, or edit a skill so it behaves predictably |
-
-## Install
-
-```
-/plugin marketplace add bmox0/dev-skills
-/plugin install dev-skills@dev-skills
-```
-
-Then restart the session. The repository carries its own
-[`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json), so it is a
-marketplace holding exactly one plugin — itself. Claude Code clones it, keeps it
-current, and `/plugin uninstall dev-skills` takes it back out again.
-
-What arrives is more than the table above:
-
-- **23 skills.** Ten of them — the pipeline entries — carry
-  `disable-model-invocation`, so the model cannot start them by itself. You type
-  them, or they do not run.
-- **3 subagents** — `implementer`, `implement-review` and `final-review`,
-  dispatched by [`dev-skills:implement`](skills/implement/SKILL.md) and never
-  invoked directly.
-- **4 hooks** ([`hooks/hooks.json`](hooks/hooks.json)) — a session-start note
-  naming the entries, plus three git guards: commit discipline on every commit,
-  history surgery reserved for `dev-skills:finish` while a run is open, and
-  default-branch protection in repositories that opt in with a `.branch-guard`
-  file at their root.
 
 ## Licence
 
