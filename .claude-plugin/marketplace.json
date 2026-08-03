@@ -1,0 +1,29 @@
+{
+  "name": "dev-skills",
+  "owner": {
+    "name": "bmox0",
+    "url": "https://github.com/bmox0"
+  },
+  "metadata": {
+    "description": "An engineering workflow for Claude Code. One idea goes in; a reviewed, integrated commit comes out.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "dev-skills",
+      "source": "./",
+      "description": "An engineering workflow for Claude Code: 23 skills, 3 subagents and 4 guard hooks covering grilling, planning, implementation, review and integration. One idea goes in; a reviewed, integrated commit comes out.",
+      "repository": "https://github.com/bmox0/dev-skills",
+      "version": "1.0.0",
+      "license": "MIT",
+      "category": "development",
+      "keywords": [
+        "workflow",
+        "planning",
+        "tdd",
+        "code-review",
+        "skills"
+      ]
+    }
+  ]
+}

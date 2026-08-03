@@ -1,9 +1,9 @@
 # dev-skills
 
 A Claude Code plugin: 23 skills for planning, building, and reviewing software
-work, installed as a single `@skills-dir` symlink. Each skill documents its own
-use inside its `SKILL.md`; this file covers what the plugin is, how to install
-it, and where its material comes from.
+work, plus the subagents and guard hooks the pipeline runs on. Each skill
+documents its own use inside its `SKILL.md`; this file covers what the plugin
+is, how to install it, and where its material comes from.
 
 ## Skills
 
@@ -35,16 +35,29 @@ it, and where its material comes from.
 
 ## Install
 
-```bash
-git clone https://github.com/bmox0/dev-skills.git
-cd dev-skills
-./install.sh
+```
+/plugin marketplace add bmox0/dev-skills
+/plugin install dev-skills@dev-skills
 ```
 
-Then restart the Claude Code session. `install.sh` symlinks this repository's
-root at `~/.claude/skills/dev-skills` — one link — and Claude Code loads it
-from there as an `@skills-dir` plugin.
+Then restart the session. The repository carries its own
+[`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json), so it is a
+marketplace holding exactly one plugin — itself. Claude Code clones it, keeps it
+current, and `/plugin uninstall dev-skills` takes it back out again.
 
+What arrives is more than the table above:
+
+- **23 skills.** Ten of them — the pipeline entries — carry
+  `disable-model-invocation`, so the model cannot start them by itself. You type
+  them, or they do not run.
+- **3 subagents** — `implementer`, `implement-review` and `final-review`,
+  dispatched by [`dev-skills:implement`](skills/implement/SKILL.md) and never
+  invoked directly.
+- **4 hooks** ([`hooks/hooks.json`](hooks/hooks.json)) — a session-start note
+  naming the entries, plus three git guards: commit discipline on every commit,
+  history surgery reserved for `dev-skills:finish` while a run is open, and
+  default-branch protection in repositories that opt in with a `.branch-guard`
+  file at their root.
 
 ## Licence
 
