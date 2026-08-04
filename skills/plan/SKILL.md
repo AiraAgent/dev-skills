@@ -68,13 +68,17 @@ dash — the dash is an assertion by the planner, not tidiness.
 |---|---|---|
 | **Goal** | what we are doing, in your own words | everyone; `dev-skills:finish` derives the commit message from it |
 | **Spec**, or "single-cycle" | where the shared context is, if there is any | everyone |
+| `Norms:` | the paths that count as an approved source of a convention | the code gate |
+| `Baseline:` | what the mandatory checks produce before any work starts | the code gate |
+| **User stories** | actor, action, outcome — what the work is for | everyone |
 | **Constraints** and **Out of scope** | where not to go | implementer |
-| **What the final gate proves** | the verification contract for this kind of task | final reviewer |
+| **What the final gate proves** | the verification contract for this kind of task | the runtime gate |
 | **Test seams** | where we check. Existing beats new, highest level that works, the ideal number of new seams is zero | implementer, reviewer |
 | **Paths and existing abstractions** | so nobody researches the codebase again | implementer, reviewer |
+| **Test cases** | what gets checked — and nothing outside it is | test writer, both gates |
 | **Topology** | segments, checkpoints, relations, the model per segment | orchestrator |
 | **Phases** | bounded units of execution, seven fields each | implementer, reviewer |
-| **Final-gate scenarios** | what is actually clicked through on the live system | final gate, human at GATE 1 |
+| **Final-gate scenarios** | the runtime projection of the test cases | the runtime gate, the human at acceptance |
 | **Ledger** | the run's record and its resume point after a compaction | orchestrator |
 
 There is **no `Commit` section**. The Goal is enough: the actor assembling the
@@ -82,6 +86,54 @@ commit reads the goal and the result.
 
 Seams live here rather than in the spec, because a spec does not always exist and
 every plan needs them. Put them to the human as their own question.
+
+The same reason puts the stories and the cases here. A spec exists only when a
+task needs more than one plan; a story that lived only in a spec would have
+nowhere to live in the single-plan case, which is most cases.
+
+## Two lines in the header
+
+Both are bare lines above `## Goal`, so every brief and every gate carries them:
+
+```markdown
+Norms: docs/adr/0007-errors.md, CONTEXT.md
+Baseline: `pnpm typecheck` → 150 errors, all outside `src/features/auth/`
+```
+
+**`Norms:`** lists the approved documents — ADRs, `CONTEXT.md`, a coding standard
+— that count as a source of convention for this work. It is the top rung of the
+review's ladder, and what is not on the line, the review does not go looking for.
+That makes completeness yours: a convention you leave off is a convention nobody
+enforces. A plan with no `Norms:` line at all is reviewed under the older, more
+legacy-tolerant rule — so leaving it out is a decision, not a shortcut.
+
+**`Baseline:`** records what the mandatory checks produce **before** any work
+starts, so the gate judges the delta rather than the absolute. A project with a
+hundred and fifty pre-existing typecheck errors, a build that was already broken,
+or — on the `dev-skills:bug` route — a deliberately failing committed test, is
+normal. A gate that bounces on absolute red never reads a line of the diff, which
+is the one thing it is there to do. Run the checks yourself and write down what
+you got. No line means "everything was green before we started", and that is an
+assertion, not a default.
+
+## User stories
+
+Actor, action, outcome, in the language the human used rather than the language
+of the code. Give each an ID:
+
+```markdown
+- **US-1.** A signed-out visitor submits an email and a password and gets an
+  account they can sign in with.
+- **US-2.** A visitor who submits an address the system will not accept is told
+  which part was rejected, and keeps what they typed.
+```
+
+The IDs matter because the test cases point back at them. That pointer turns "is
+this story covered?" into a question with an answer instead of an impression.
+
+Stories are not phases. A phase is a unit of execution and can be invisible from
+outside; a story is what the work is for. One story usually spans several phases,
+and a phase serving no story is worth a question at the gate.
 
 ## Anatomy of a phase
 
@@ -97,10 +149,9 @@ for — which is exactly what the plan exists to prevent.
 
 **Fixed exhaustively:** every path touched, including test paths; the
 abstractions used, by name and with their path; which names and signatures are
-public and must not change; the verification cases and the assertions they
-expect; edge cases and the behaviour on them; what counts as an error and how it
-shows; what not to touch and what not to introduce; order, where order carries
-meaning.
+public and must not change; which test cases the phase makes true; edge cases and
+the behaviour on them; what counts as an error and how it shows; what not to
+touch and what not to introduce; order, where order carries meaning.
 
 **Never appears:** function bodies, test code, imports, style. That is typing,
 not deciding. The planner saves nothing by omitting it, because the planner
@@ -127,7 +178,7 @@ anchors.
 | **How** | named abstractions with paths, plus the negative side: what not to introduce |
 | **Do not touch** | only conflicts *inside* paths already granted |
 | **Frozen for later phases** | names, signatures and data shapes that later phases build on |
-| **Verification** | seam, file, cases with their expected assertions |
+| **Verification** | the approved test cases this phase makes true, by ID |
 | **Steps** | the order of work, with checkboxes |
 
 **All seven are mandatory; absence is written as a dash.** `Do not touch: —` means
@@ -163,16 +214,12 @@ invisible omission.
 - —
 
 **Verification**
-- level: `useTheme`, file `src/shared/theme/useTheme.test.ts`
-- `toggle()` with `theme='light'` → `theme` becomes `'dark'`
-- `toggle()` twice → `theme` is back to `'light'`
-- after remount → `theme` is read from `localStorage`
-- `disabled=true`, click → `setTheme` is not called
+- cases: TC-4, TC-5, TC-6, TC-7
 
 **Steps**
 - [ ] wire `useTheme` into `ThemeToggle`
 - [ ] hang the toggle on `onClick`
-- [ ] write the test over the four cases above
+- [ ] take TC-4 through TC-7 green
 ````
 
 ### Sizing a phase
@@ -255,27 +302,48 @@ meaningful check goes after the third and closes all three.
 You **propose** where the checkpoints go; the human approves and corrects. This is
 one of the points where a human in the loop is mandatory.
 
-Three relations, marked by you and approved by the human:
+Two relations, marked by you and approved by the human:
 
 | Relation | Meaning |
 |---|---|
-| **Sequential** | the next segment starts only after a green verdict on this one |
-| **Asynchronous** | the next segment starts right after the intermediate commit, without waiting for the verdict |
-| **Parallel** | two phases run at the same time; not necessarily adjacent — 1 and 4, 5 and 7 |
+| **Sequential** | starts only once the work it depends on has landed as a commit |
+| **Parallel** | a group of phases runs at once from one HEAD, and a later phase joins them |
 
-**Asynchronous is not the default.** Mark a specific checkpoint as asynchronous
-when its possible findings cannot affect the next segment, and let the human
-approve the mark with the plan. An asynchronous mark requires that the paths of
-the two segments **do not intersect**; inside one segment intersection is fine,
-because it all lands in one commit.
+There was a third, *Asynchronous* — start the next unit without waiting for the
+intermediate verdict. It was an optimisation on a wait, and the run no longer
+takes that wait.
+
+### Parallel is contractual, or it does not happen
 
 **Parallelism is not the goal of splitting.** Make it the goal and phases get cut
 to avoid touching shared files, which turns one meaningful checkable phase into
-thirty file-disjoint fragments. Two phases may edit the same file and still be
-entirely independent — parallelise by purpose, not by file. Highlight parallelism
-where it is obvious, and feel free to move a checkpoint so independent phases land
-in one segment; do not cut for it. Where paths genuinely intersect, phases run
-sequentially.
+thirty file-disjoint fragments.
+
+Mark phases Parallel only where **all three** of these hold. Two out of three is
+Sequential.
+
+1. **The contract between the sides is already frozen** — by an earlier phase's
+   *Frozen for later phases*. Both sides build against names, signatures and data
+   shapes that neither of them invents, and neither reads the other's code.
+2. **Their write-sets do not intersect.** Take the union of the *Changes* fields
+   on each side and check that the two unions are disjoint. That is checkable at
+   approval, by you and by the human, with no judgement in it.
+3. **A later phase joins them.** Name it. Without a join, nothing ever proves the
+   two sides meet.
+
+The canonical shape:
+
+```text
+phase 1  lands the module, and freezes the contract
+phase 2  builds one side of it   ┐ parallel — disjoint paths, neither sees the
+phase 3  builds the other side   ┘ other's code, both see the contract
+phase 4  joins them
+```
+
+Disjoint paths are a **precondition**, not a hope. This file used to permit two
+phases to edit one file at once — "parallel by purpose, not by file" — and that
+permission is exactly where the collisions came from. Where paths intersect, the
+phases run Sequential.
 
 Assign the **model per segment** — Haiku or Sonnet by difficulty. The orchestrator
 executes the assignment and does not change it silently.
@@ -306,49 +374,71 @@ The one-off half of the environment contract: what gets clicked through on the
 live system. The permanent half — how the project is built and run — lives in
 `CLAUDE.md`; see `dev-skills:implement`'s `environment-contract.md`.
 
-Numbered, concrete, each with its expectation:
+**Every scenario is the executable spelling of a test case, and says which one.**
+Numbered, concrete, each with its `from:` and its expectation:
 
 ```markdown
-1. Start the app with `mcp.enabled = true`, `transport = "stdio"`. Connect an MCP
-   client to the process. Expect: a non-empty tool list, each with a name and a
-   schema.
-2. Restart with `transport = "http"`. Connect with a valid session. Expect: the
-   same list.
-3. Repeat without a token. Expect: 401.
+1. from: TC-1 — Start the app with `mcp.enabled = true`, `transport = "stdio"`.
+   Connect an MCP client to the process. Expect: a non-empty tool list, each with
+   a name and a schema.
+2. from: TC-2 — Restart with `transport = "http"`. Connect with a valid session.
+   Expect: the same list.
+3. from: TC-5 — Repeat without a token. Expect: 401.
 ```
 
-The human approves this list at planning. At GATE 1 it is the checklist they work
-through — they never have to work out what to check.
+A scenario with no `from:` is a requirement nobody approved, and it does not get
+driven. Scenarios are not invented here — inventing them is how the runtime gate
+ends up checking things the human never agreed were the point.
+
+The list therefore needs no approval of its own: the human already approved the
+meaning when they approved the cases. At acceptance it is the checklist they work
+through, so they never have to work out what to check.
 
 ## Ledger
 
 The run's record and the resume point after a compaction:
 
 ```markdown
+- [ ] Plan approved
+- [ ] Test cases approved
 - [ ] Checkpoint 1
 - [ ] Checkpoint 2
 - [ ] Final gate
-- [ ] GATE 1: functional acceptance by the human
 - [ ] Squash prepared
-- [ ] GATE 2: code acceptance by the human
+- [ ] Accepted by the human
 - [ ] Integrated
 ```
+
+**One human acceptance, and it sits after the squash.** The human approves
+exactly the object that lands on the base, not a range that is afterwards
+rewritten into something nobody read. Two separate acceptances — one for
+behaviour, one for code — meant the second arrived after the first had already
+been spent, and it never bought a second decision.
+
+If the test-case grilling reopened the plan, the round gets its own line:
+
+```markdown
+- [ ] Plan re-approved (round 2)
+```
+
+An approval that was superseded has to be visible. Without the line the run
+carries a plan the Ledger calls approved, in a version nobody approved.
 
 ## Verification always exists
 
 Whether the project has test infrastructure is fixed by **the plan**, not
 discovered by the implementer. The expected testable scope is part of the plan.
 
-If the project has no tests, a phase still declares verification — as an
-observation or a command rather than a test: "grep to confirm the file exists and
-is imported". Without it, in a project without tests, phases have no check at all
-short of the final gate.
+If the project has no tests, a case is still written — as an observation or a
+command rather than a test: "grep confirms the file exists and is imported".
+Without it, in a project without tests, phases have no check at all short of the
+final gate.
 
-**The plan names the cases; the implementer writes the test code.** *Verification*
-gives the level, the file, and the list of cases with expected assertions — what
-counts as correct behaviour, which is a decision. The scaffolding — `describe`,
-mocks, fixtures, render helpers — is mechanics and follows the repository's
-neighbouring tests.
+**The plan names the cases; the code that checks them is written from them.**
+*Verification* carries the case IDs and nothing else. What counts as correct
+behaviour is a decision and lives once, in `## Test cases`; the scaffolding —
+`describe`, mocks, fixtures, render helpers — is mechanics and follows the
+repository's neighbouring tests.
 
 Where red *is* the contract — a bug, or tests as the goal — say in the phase that
 the test lands as **its own commit before the implementation**, so the reviewer
@@ -358,11 +448,14 @@ can run it there and watch it fail.
 
 Read the plan against the spec, or against the conversation if there is no spec:
 
-1. **Coverage.** Every requirement points at a phase. List anything that does not.
+1. **Coverage.** Every story points at a phase, and every phase serves a story.
+   List anything on either side that does not.
 2. **Placeholders.** No "TBD", no "handle edge cases", no "similar to phase N".
 3. **Name consistency.** A symbol frozen in phase 1 is spelled the same way in
    phase 4.
 4. **Seven fields.** Every phase has all seven subheadings, dashes included.
+5. **The header lines.** `Norms:` names every document a reviewer is allowed to
+   hold the work to. `Baseline:` was measured, not guessed.
 
 Fix what you find inline. For interface shape and seam placement, the vocabulary
 is in [codebase-design.md](references/codebase-design.md).
@@ -371,23 +464,87 @@ is in [codebase-design.md](references/codebase-design.md).
 
 Present the plan and take approval before anything is built. Show:
 
+- the user stories;
 - the phase list, one line each;
 - the topology: segments, checkpoints and their relations, with the reason for
-  each checkpoint;
-- the final-gate scenarios;
+  each checkpoint, and for any Parallel group the frozen contract, the two
+  disjoint path sets and the join phase;
 - the test seams, as their own question;
+- the `Norms:` and `Baseline:` lines;
 - anything you settled by your own judgement rather than from the spec.
 
 Then ask:
 
 > **This plan, as written, is what gets built. Approve?**
 
-This is the last point where a correction is free.
+Not the final-gate scenarios: they are a projection of test cases that do not
+exist yet. They come next, and so does the second approval.
+
+## Test cases
+
+Written **after** the plan is approved, in the same session, with the human in
+the room. Not drafted silently and handed over to be corrected forever — ask
+leading questions and write down the answers. "What should happen if the address
+is already taken?" is the shape of it.
+
+The human approves the **meaning** of a case. Test code, mocks and fixtures never
+reach them.
+
+**A case is not a test.** "An invalid email cannot register" is a case; the regex
+and the wording of the error are mechanics, and they are somebody else's.
+
+Each case carries an ID, the story it serves, preconditions, the action, the
+expected behaviour, a starting state, and a `gate-b:` label:
+
+```markdown
+- **TC-3** · US-2 · gate-b: browser
+  - given: a signed-out visitor on `/signup`
+  - when: they submit `alice@` and a valid password
+  - then: the form stays, the field is marked, and what they typed is still there
+  - initial state: RED
+```
+
+A case serving no story is either a missing story or a case nobody asked for —
+resolve it, do not leave it. The starting state is `RED`, `GREEN` or
+`NOT-YET-RUNNABLE`; `GREEN` is a real answer, because a case that already holds
+is how a regression becomes visible later.
+
+### What the `gate-b:` label decides
+
+`browser`, `snapshot`, `simulator`, `http`, or `N/A`.
+
+**Whatever is not in the test cases is not checked on the running system.** The
+label is what makes that rule mechanical rather than aspirational: the runtime
+gate is handed exactly the cases whose label is not `N/A`, and writes one piece
+of evidence per case. A case with no file was not checked. Not written down means
+not tested.
+
+**Zero executable cases stops the run here.** A plan whose outcome cannot be
+observed on a running system has not said how anyone would know it worked, and
+finding that out after the code is built costs the whole build. The stop is
+lifted only by the human saying, explicitly, that `N/A` everywhere is right for
+this work. It is never lifted by silence.
+
+Then write the final-gate scenarios as the projection of the executable cases,
+and take the second approval:
+
+> **These cases are what gets checked, and nothing else is. Approve?**
+
+### When the grilling opens a hole
+
+Working through the cases sometimes exposes something the phases cannot express —
+an architectural gap, a seam in the wrong place, a story nobody had written down.
+That voids the first approval. Present the plan whole again rather than patching
+it quietly, and add the round to the Ledger.
+
+A quiet second version of an approved plan is worse than a visible re-approval:
+the human believes they are watching a plan they read.
 
 ## Handoff
 
-Once approved, stop. The human invokes `dev-skills:implement`; it creates the workspace,
-runs preflight, and executes. Do not create a branch or a worktree here.
+Once both approvals are in, stop. The human invokes `dev-skills:implement`; it
+creates the workspace, runs preflight, and executes. Do not create a branch or a
+worktree here.
 
 ## What is not in a plan
 
