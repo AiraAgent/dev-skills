@@ -1,0 +1,13 @@
+diff --git a/skills/implement/scripts/segment-dispatch b/skills/implement/scripts/segment-dispatch
+index 2523289..3734809 100755
+--- a/skills/implement/scripts/segment-dispatch
++++ b/skills/implement/scripts/segment-dispatch
+@@ -171,8 +171,6 @@ def topology_segments(lines):
+ 
+         h2 = HEADING2_RE.match(line)
+         if h2:
+-            if in_topology:
+-                break  # the next level-2 heading ends the Topology section
+             if h2.group(1).strip().lower() == "topology":
+                 in_topology = True
+                 found_section = True

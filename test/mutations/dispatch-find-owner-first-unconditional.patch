@@ -1,0 +1,19 @@
+diff --git a/skills/implement/scripts/segment-dispatch b/skills/implement/scripts/segment-dispatch
+index 2523289..cfa5841 100755
+--- a/skills/implement/scripts/segment-dispatch
++++ b/skills/implement/scripts/segment-dispatch
+@@ -196,13 +196,7 @@ def topology_segments(lines):
+ def find_owner(segments, first, last):
+     """(owner, None) on an exact match; (None, spanning) when the requested
+     range overlaps more than one segment; (None, []) when nothing covers it."""
+-    exact = [s for s in segments if s.first == first and s.last == last]
+-    if exact:
+-        return exact[0], None
+-    overlapping = [s for s in segments if not (s.last < first or s.first > last)]
+-    if len(overlapping) > 1:
+-        return None, overlapping
+-    return None, []
++    return segments[0], None
+ 
+ 
+ # ---------------------------------------------------------------------------

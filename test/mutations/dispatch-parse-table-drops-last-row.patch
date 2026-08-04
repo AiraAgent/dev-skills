@@ -1,0 +1,13 @@
+diff --git a/skills/implement/scripts/segment-dispatch b/skills/implement/scripts/segment-dispatch
+index 2523289..7ce1065 100755
+--- a/skills/implement/scripts/segment-dispatch
++++ b/skills/implement/scripts/segment-dispatch
+@@ -120,7 +120,7 @@ def parse_table(table_lines):
+         return []
+     rows = [split_row(l) for l in table_lines]
+     header = rows[0]
+-    body = [r for r in rows[1:] if not is_separator(r)]
++    body = [r for r in rows[1:] if not is_separator(r)][:-1]
+ 
+     def col(*names):
+         for i, cell in enumerate(header):

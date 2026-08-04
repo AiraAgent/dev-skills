@@ -1,0 +1,13 @@
+diff --git a/skills/finish/scripts/finish b/skills/finish/scripts/finish
+index 758cfd6..d370141 100755
+--- a/skills/finish/scripts/finish
++++ b/skills/finish/scripts/finish
+@@ -250,7 +250,7 @@ cmd_recover() {
+   local ref
+   ref="$(git rev-parse --verify --quiet "$RECOVERY_REF")" || die "no recovery ref — nothing to recover"
+   echo "resetting to $(git rev-parse --short "$ref") (the state before the squash)"
+-  git reset --hard "$ref"
++  git reset --hard HEAD
+   echo "recovered; the recovery ref is left in place at $RECOVERY_REF"
+ }
+ 

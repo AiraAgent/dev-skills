@@ -1,0 +1,14 @@
+diff --git a/skills/implement/scripts/segment-dispatch b/skills/implement/scripts/segment-dispatch
+index 2523289..60d0e1b 100755
+--- a/skills/implement/scripts/segment-dispatch
++++ b/skills/implement/scripts/segment-dispatch
+@@ -73,7 +73,8 @@ def parse_range(raw):
+     if m:
+         first, last = int(m.group(1)), int(m.group(2))
+     elif re.fullmatch(r"\d+", raw):
+-        first = last = int(raw)
++        first = int(raw)
++        last = int(raw) + 1
+     else:
+         die("bad RANGE: %s (want 3 or 2-4)" % raw, 2)
+     if first > last:

@@ -1,0 +1,13 @@
+diff --git a/skills/implement/scripts/segment-contract b/skills/implement/scripts/segment-contract
+index bc4af41..3e31fc3 100755
+--- a/skills/implement/scripts/segment-contract
++++ b/skills/implement/scripts/segment-contract
+@@ -49,7 +49,7 @@ body=$(awk -v first="$first" -v last="$last" '
+ 
+   !fence && /^###[ \t]+Phase[ \t]+[0-9]+/ {
+     n = $0; sub(/^###[ \t]+Phase[ \t]+/, "", n); sub(/[^0-9].*$/, "", n)
+-    inseg = (n + 0 >= first && n + 0 <= last)
++    inseg = !(n + 0 >= first && n + 0 <= last)
+     title = $0; sub(/^###[ \t]+/, "", title)
+     infield = 0
+     next

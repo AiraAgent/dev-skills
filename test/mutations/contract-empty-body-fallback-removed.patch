@@ -1,0 +1,16 @@
+diff --git a/skills/implement/scripts/segment-contract b/skills/implement/scripts/segment-contract
+index bc4af41..8f2a9f8 100755
+--- a/skills/implement/scripts/segment-contract
++++ b/skills/implement/scripts/segment-contract
+@@ -69,11 +69,6 @@ body=$(awk -v first="$first" -v last="$last" '
+   }
+ ' "$plan")
+ 
+-if [ -z "$body" ]; then
+-  body="No phase in ${first}-${last} freezes anything for later phases.
+-Nothing in this segment is off limits to ordinary findings."
+-fi
+-
+ out_text="# Output contract — phases ${first}-${last}
+ 
+ Names, signatures and data shapes that later phases were briefed against. A

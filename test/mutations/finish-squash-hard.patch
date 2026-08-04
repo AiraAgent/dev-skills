@@ -1,0 +1,13 @@
+diff --git a/skills/finish/scripts/finish b/skills/finish/scripts/finish
+index 758cfd6..93926f2 100755
+--- a/skills/finish/scripts/finish
++++ b/skills/finish/scripts/finish
+@@ -164,7 +164,7 @@ cmd_squash() {
+   git update-ref "$RECOVERY_REF" HEAD
+   echo "recovery ref: $RECOVERY_REF -> $(git rev-parse --short HEAD)"
+ 
+-  git reset --soft "$base"
++  git reset --hard "$base"
+   git commit --cleanup=strip -F "$msgfile" --quiet
+ 
+   after="$(git rev-parse 'HEAD^{tree}')"
