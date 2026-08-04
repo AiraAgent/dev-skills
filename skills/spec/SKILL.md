@@ -47,6 +47,11 @@ notice until integration.
 **Glossary.** The terms already carried into `CONTEXT.md` that every plan must
 use identically. Names only; the definitions live in `CONTEXT.md`.
 
+**Integration invariants.** What has to stay true where two plans meet — an
+ordering, a shape passed between them, a state neither may leave behind. Each
+plan is verified on its own; these are the claims no single plan's verification
+can reach.
+
 **Plans.** A list, not a backlog — see below.
 
 **ADR candidate**, if one arose. A proposal, never an action: name the decision
@@ -58,6 +63,12 @@ no code, no phases, no checkboxes, no implementation order, no estimates, no
 instructions to an implementer. All of that belongs to a plan. The spec outlives
 changes to the code; a plan is stale after the merge it describes. That is why
 they are separate documents, and this section is how the separation stays real.
+
+**And no user stories, and no test cases.** They belong to a plan, and they are
+not duplicated here. A spec exists only when the work needs more than one plan;
+a story that lived at this level would have nowhere to live at all in the
+single-plan case, which is most cases. Each plan carries its own stories, grills
+its own cases out of the human, and is the only owner of both.
 
 ## The list of plans
 
@@ -94,6 +105,36 @@ plan; a full backend service is planned and verified on its own, and only then
 is the UI planned.
 
 Do not introduce a level between spec and plan.
+
+## When the spec arrives late
+
+The second plan is often not visible until the first one is approved, or built.
+The answer is not to write specs pre-emptively — most tasks produce one plan, and
+the spec would be overhead nobody reads. The answer is to have a route for the
+day the second plan appears.
+
+On that day:
+
+1. **Create the spec**, as above.
+2. **Register the existing plan** as entry 1, in whatever state it is actually
+   in.
+3. **Move** the decisions it holds that now bind the second plan too — out of the
+   plan, into *Decisions taken*.
+4. Leave a dated pointer where they used to be:
+
+```markdown
+Spec: .ai-workflow/specs/2026-08-04-mcp.md — decisions moved 2026-08-04
+```
+
+**Move, never copy.** Two owners of one decision is exactly the failure this
+document exists to prevent. A plan is edited during execution and a spec is not,
+so by plan 3 the two copies disagree and nobody can say which is current. A copy
+is not a safety net; it is a second version.
+
+**The first plan's stories and test cases do not move, and are not
+re-approved.** They were approved for that plan, they still describe it, and
+taking them up here would strip the one document that has to carry them. Only
+shared decisions rise.
 
 ## Storage
 
