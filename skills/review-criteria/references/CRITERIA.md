@@ -14,18 +14,18 @@ can drift from the others.
 
 ## The producible-source rule
 
-**A blocking finding cites its source.** One of four:
+**A finding cites its source.** One of four:
 
-- a convention this repository documents;
-- a pattern that **already exists** in the code, named with its path;
+- a norm, and the norms ladder below says which sources count as one;
 - a requirement of the phase under review;
-- a constraint from the plan's header.
+- a constraint from the plan's header;
+- a smell from the baseline below.
 
 Cannot show the source? It is not a finding, and it is not written down.
 
 > "I don't like this name" does not pass.
-> "Handlers of this kind live in `hooks/` in this project, this one is inside the
-> component" passes.
+> "The ADR the plan names under `Norms:` puts handlers of this kind in `hooks/`;
+> this one is inside the component" passes.
 
 The rule exists because correctness is settled before any code is read — the
 reviewer runs the checks first — so what remains is the territory of taste, and
@@ -34,14 +34,30 @@ the search for smells has no natural floor. Without a source requirement,
 invisibly: the human is *on* the loop, not in it, and never sees the round that
 was not worth running.
 
-## Two classes, and only two
+## Two classes of finding, and what each one costs
 
-**Finding** — blocking. Cited, and it goes back to the implementer.
+Classify by **consequence**, never by how you arrived at it. A mechanical
+comparison and a judgement call can both land in either class.
 
-**Observation** — recorded, never blocking, never extends a loop. Anything true
-but outside this review's scope lands here.
+**`BLOCKER`** — a failed check or a failed test case, a `PLAN_CONFLICT`, or a
+violation of a user story, of security, of data integrity, or of a norm the plan
+made mandatory on its `Norms:` line. It goes back to the implementer.
 
-There is no third severity.
+**`ADVISORY`** — maintainability and preference, with no contract violation
+demonstrated. Cited like any other finding, and written down like any other.
+
+**An `ADVISORY` never opens a fix round.** It travels to the human alongside the
+diff, counted on one line. This is the single largest saving in the loop, and it
+is deliberate: on a measured run, two fix rounds cost an hour and a quarter
+against thirty-seven minutes of implementation, and neither finding that bought
+them was blocking. An advisory costs the human one reading. A fix round costs an
+implementer pass and a gate pass. Only a `BLOCKER` is worth that.
+
+**Observation** — not a finding at all. Recorded, never blocking, never counted,
+never extends a loop. Anything true but outside this review's scope lands here,
+and so does everything the third rung of the norms ladder catches.
+
+There is no third class of finding.
 
 ## Judge the fields, not the steps
 
@@ -93,7 +109,11 @@ always wins, and where it endorses what the baseline would flag, the smell is
 suppressed. **Every entry is a judgement call** — "possible Feature Envy", never
 a violation. Skip anything tooling already enforces.
 
-Visible inside one segment's diff — `dev-skills:implement-review` owns these:
+One list, for every seat. This file used to split it — smells visible inside one
+diff, smells visible only once the pieces were assembled — and that was a split
+by segment, written when a reviewer held one segment and could be told which half
+to skip. Whether an entry is visible is a fact about how much of the work the
+seat holds, not a fact about the smell. Judge what you can see.
 
 - **Mysterious Name** — a name that does not reveal what it does or holds. → rename; if no honest name comes, the design is murky.
 - **Primitive Obsession** — a primitive standing in for a domain concept. → give the concept its own small type.
@@ -104,23 +124,47 @@ Visible inside one segment's diff — `dev-skills:implement-review` owns these:
 - **Middle Man** — a unit that mostly delegates onward. → cut it.
 - **Refused Bequest** — a subclass ignoring most of what it inherits. → composition.
 - **Speculative Generality** — abstraction for a need the plan does not have. → delete it.
-
-Visible only once segments are assembled — `dev-skills:final-review` and `dev-skills:review` own
-these; a reviewer holding one segment's diff structurally cannot see them:
-
-- **Duplicated Code** — the same logic shape in more than one place. Two segments built by two cold implementers, neither having seen the other, is the case that produces it.
+- **Duplicated Code** — the same logic shape in more than one place.
 - **Shotgun Surgery** — one logical change forcing scattered edits.
 - **Divergent Change** — one module edited for several unrelated reasons.
 
-## Repository conventions
+Duplicated Code is worth a deliberate look wherever two cold implementers built
+adjacent things without either having seen the other's code. That is the case
+that produces it, and neither of them could have noticed.
 
-Read what the repository says about how its code is written — `CLAUDE.md`,
-`CONTRIBUTING.md`, `CODING_STANDARDS.md`, `CONTEXT.md` for vocabulary — and
-judge the part decidable from the diff in hand: naming, import style, error
-handling, the pattern already used in that area.
+## Where a norm comes from — the ladder
 
-Documented conventions are hard: they cite themselves. Everything else needs an
-existing pattern in the code to point at.
+Rank the sources and stop at the first one that answers. Judge only the part
+decidable from the diff in hand: naming, import style, error handling, layout.
+
+1. **Approved documents** — an ADR, `CONTEXT.md`, a coding standard — but only
+   the paths the plan lists on its `Norms:` header line. What is not listed, you
+   do not go looking for; the planner owns that line's completeness, not you.
+2. **Precedents and prohibitions the plan names itself** — the negative half of a
+   phase's *how* field, the "use this, not that".
+3. **Everything else.** A pattern merely existing in the code is not a norm. Say
+   what you saw as an `Observation` and move on.
+
+The third rung is the point of the ladder. The rule it replaces ended "everything
+else needs an existing pattern in the code to point at", which turned age into
+authority: a reviewer could bless a legacy pattern by pointing at the legacy. A
+real defect shipped that way, and shipped predictably — the implementer copied
+the oldest thing it found, and the review had nothing to say against it.
+
+A tier-1 document and a tier-2 instruction that contradict each other is a
+blocking `PLAN_CONFLICT`. Do not quietly pick the one you prefer.
+
+**Do not compute a norm.** "The newer pattern", "the more widespread pattern" —
+each needs a repository sweep and git archaeology, and no reviewer here has that
+budget. If it is not on the ladder, it is not a norm.
+
+**When the plan carries no `Norms:` line, this ladder does not apply.** The older
+rule stands instead: read what the repository says about how its code is written —
+`CLAUDE.md`, `CONTRIBUTING.md`, `CODING_STANDARDS.md`, `CONTEXT.md` for
+vocabulary — documented conventions are hard because they cite themselves, and
+everything else needs an existing pattern in the code to point at. A plan written
+before the header line existed gets reviewed at today's strictness. Without this,
+the ladder would make those plans *easier* to pass than they are now.
 
 ## What is never a finding
 
@@ -132,8 +176,9 @@ existing pattern in the code to point at.
 - **A decision an earlier segment already closed.** Accepted work is not
   reopened; the reviewer confirms the related phases were checked and moves on.
 - **Anything tooling enforces.** Formatting a linter fixes is not review.
-- **Style the repository has never stated and never demonstrated.** That is the
-  producible-source rule, and it is the most common way this review goes wrong.
+- **A norm the ladder does not reach.** Style no approved document states and no
+  plan names. That is the producible-source rule, and it is the most common way
+  this review goes wrong.
 
 ## What a stated rationale is worth
 
