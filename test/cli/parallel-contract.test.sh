@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
-# Pins skills/implement/scripts/segment-contract without --built: the
-# extractor that assembles a segment's "Frozen for later phases" fields,
-# using test/fixtures/plan-frozen.md as generic plan input.
+# Pins skills/implement/scripts/parallel-contract: the extractor that
+# assembles a phase range's "Frozen for later phases" fields, using
+# test/fixtures/plan-frozen.md as generic plan input.
+#
+# The script is segment-contract renamed, with its --built half removed by
+# migration commit (4). The extractor itself is unchanged — it always sliced by
+# phase range rather than by segment — so every case below is the same case it
+# was, and a difference here would mean the rename took something with it.
 set -uo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,11 +14,11 @@ repo_root="$(cd "$here/../.." && pwd)"
 
 . "$repo_root/test/lib/harness.sh"
 
-script="$repo_root/skills/implement/scripts/segment-contract"
+script="$repo_root/skills/implement/scripts/parallel-contract"
 plan="$repo_root/test/fixtures/plan-frozen.md"
 
 fail() {
-  echo "segment-contract.test.sh: $1" >&2
+  echo "parallel-contract.test.sh: $1" >&2
   exit 1
 }
 
@@ -62,7 +67,7 @@ run_to_file 4
 [ "$rc" -eq 0 ] || fail "RANGE=4 should exit 0"
 out=$(cat "$outfile")
 
-assert_contains "$out" "Nothing in this segment is off limits to ordinary findings" \
+assert_contains "$out" "Nothing in this range is off limits to ordinary findings" \
   "range-4 (phase 4 freezes nothing) must show the fallback text" || fail "fallback text missing"
 [ -n "$out" ] || fail "range-4 output must not be empty"
 
@@ -96,7 +101,7 @@ assert_contains "$err" "bad RANGE: abc (want 3 or 2-4)" \
 err=$("$script" "$plan" 2>&1 1>/dev/null)
 rc=$?
 [ "$rc" -eq 2 ] || fail "no RANGE at all should exit 2"
-assert_contains "$err" "usage: segment-contract" \
+assert_contains "$err" "usage: parallel-contract" \
   "no RANGE at all should print the usage line" || fail "usage line missing"
 
 echo "ok"

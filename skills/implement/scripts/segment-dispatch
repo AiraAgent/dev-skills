@@ -14,10 +14,10 @@ still sitting in the terminal output. So: stdout gets exactly one line, the
 output path and how many holes remain. Everything else lives in the file.
 
 Per-run invariants — the fact/decision protocol, git staging discipline,
-never-amend, the report contract, the reviewer's order of work — are not
-reproduced here. They live in agents/implementer.md and
-agents/implement-review.md, which each dispatched subagent reads as its own
-system prompt. This script only points at that file by name.
+never-amend, the report contract, the self-check, a gate's order of work — are
+not reproduced here. They live in agents/implementer.md and agents/gate-a.md,
+which each dispatched subagent reads as its own system prompt. This script only
+points at that file by name.
 
 Anything this script cannot derive becomes a visible `<<< FILL: ... >>>`
 marker, phrased as a question — never a guess, never a blank that invites
@@ -26,8 +26,12 @@ contains, so the agent that reads it (which has to read it anyway) can refuse
 to proceed on an incomplete dispatch without relying on the orchestrator to
 remember to check.
 
-Usage: segment-dispatch PLAN_FILE RANGE [--reviewer] [--force]
+Usage: segment-dispatch PLAN_FILE RANGE [--force]
+       segment-dispatch PLAN_FILE --gate-a [--force]
   RANGE   a single phase (3) or an inclusive span (2-4), as segment-brief takes
+
+--gate-a builds the code gate's dispatch instead, and takes no RANGE: the gate
+holds the whole BASE..HEAD, not one row of the Topology table.
 """
 
 import os
@@ -230,11 +234,19 @@ TDD_HOLE = hole(
     "leaving the question unanswered.")
 
 
+BASELINE_HOLE = hole(
+    "What did the mandatory checks produce before this run started? Copy the "
+    "plan's `Baseline:` line here, or say \"everything was green\" if the plan "
+    "carries no such line — the gate judges the delta, and without this it "
+    "judges the absolute and bounces on inherited red.")
+
+
 def commit_range_hole(plan_abs):
     return hole(
-        "What are the BASE and HEAD commits of the range under review? "
-        "Run `%s %s <BASE> <HEAD>` with them to produce the review package, "
-        "then put the path it prints in place of this line."
+        "What are the BASE and HEAD commits of the run? BASE is the one "
+        "run-state recorded, not HEAD~1. Run `%s %s <BASE> <HEAD>` with them "
+        "to produce the review package, then put the path it prints in place "
+        "of this line."
         % (os.path.join(HERE, "review-package"), plan_abs))
 
 
@@ -261,34 +273,69 @@ def extract_written_path(brief_stdout):
     return m.group(1)
 
 
+def contracts_dir(workspace):
+    """The run's contracts live together, one file per range, so a brief and a
+    join dispatch can point at the same file rather than each deriving one."""
+    path = os.path.join(workspace, "contracts")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def existing_reports(workspace):
+    """The reports already written in this run, in numeric order. A later phase
+    reads these and the plan — never an earlier phase's diff."""
+    if not os.path.isdir(workspace):
+        return []
+    found = []
+    for name in os.listdir(workspace):
+        m = re.fullmatch(r"segment-(\d+)-report\.md", name)
+        if m:
+            found.append((int(m.group(1)), os.path.join(workspace, name)))
+    return [p for _n, p in sorted(found)]
+
+
 def build_implementer_body(plan, first, last, rng, owner, workspace, agent_file):
     brief_path = extract_written_path(run_sibling("segment-brief", plan, rng))
     report_path = os.path.join(workspace, "segment-%d-report.md" % owner.n)
 
     if first == 1:
-        built_text = (
-            "Nothing precedes this segment; no earlier contract binds it. "
-            "This is derived from the range — its first phase is 1 — not "
-            "from a failed lookup. segment-contract --built was not run.")
+        contract_text = (
+            "Nothing precedes this work; no earlier contract binds it. This "
+            "is derived from the range — its first phase is 1 — not from a "
+            "failed lookup.")
+        reports_text = (
+            "No earlier report exists yet. Same reason: nothing precedes this.")
     else:
         prior_range = "1-%d" % (first - 1)
-        built_text = run_sibling(
-            "segment-contract", "--built", plan, prior_range).strip()
+        contract_path = os.path.join(
+            contracts_dir(workspace), "%s.md" % prior_range)
+        run_sibling("parallel-contract", plan, prior_range, contract_path)
+        contract_text = contract_path
+
+        reports = existing_reports(workspace)
+        reports_text = "\n".join(reports) if reports else (
+            "No earlier report is on disk. If that surprises you, say so and "
+            "stop — do not go reading diffs to work out what was built.")
 
     parts = [
-        "# Implementer dispatch — segment %d (phases %s)" % (owner.n, owner.phases_raw),
+        "# Implementer dispatch — phases %s" % owner.phases_raw,
         "",
-        "## Where this segment sits",
-        "Segment %d of this run, phases %s. Model: %s."
-        % (owner.n, owner.phases_raw, owner.model),
-        "Checkpoint here because: %s" % owner.why,
+        "## Where this work sits",
+        "Phases %s of this run. Model: %s." % (owner.phases_raw, owner.model),
+        "The boundary is here because: %s" % owner.why,
         "",
         "## Brief",
         "Read this first, in full:",
         brief_path,
         "",
-        "## What already exists",
-        built_text,
+        "## The contract you build against",
+        "Names, signatures and shapes frozen by everything before you. You do "
+        "not read the earlier code:",
+        contract_text,
+        "",
+        "## What was already built",
+        "The reports of the phases before yours:",
+        reports_text,
         "",
         "## Report",
         "Write the full report to:",
@@ -305,54 +352,69 @@ def build_implementer_body(plan, first, last, rng, owner, workspace, agent_file)
         "",
         "## Everything else",
         "The fact/decision protocol, git staging discipline, never-amend, "
-        "the report contract and the return format are already in this "
-        "agent's own definition:",
+        "the self-check, the report contract and the return format are "
+        "already in this agent's own definition:",
         agent_file,
         "Nothing above restates them. Do not restate them back either.",
     ]
     return "\n".join(parts) + "\n"
 
 
-def build_reviewer_body(plan, first, last, rng, owner, workspace, agent_file):
-    brief_path = extract_written_path(run_sibling("segment-brief", plan, rng))
-    report_path = os.path.join(workspace, "segment-%d-report.md" % owner.n)
-
-    contract_path = os.path.join(workspace, "segment-%s-contract.md" % rng)
-    run_sibling("segment-contract", plan, rng, contract_path)
-
+def build_gate_a_body(plan, workspace, agent_file):
     criteria_path = find_criteria()
     if not criteria_path:
         die("cannot find CRITERIA.md under %s"
             % os.path.join(SKILLS_DIR, "review-criteria"))
 
+    contract_path = os.path.join(contracts_dir(workspace), "all.md")
+    run_sibling("parallel-contract", plan, "1-9999", contract_path)
+
+    reports = existing_reports(workspace)
+    reports_text = "\n".join(reports) if reports else (
+        "No implementer report is on disk. That is not normal after a run: "
+        "say so and stop rather than judging the range without them.")
+
+    evidence_dir = os.path.join(workspace, "gate-a")
+    os.makedirs(evidence_dir, exist_ok=True)
+
     parts = [
-        "# Reviewer dispatch — segment %d (phases %s)" % (owner.n, owner.phases_raw),
+        "# Gate A dispatch — the whole range",
         "",
-        "## Brief",
-        brief_path,
+        "## Plan",
+        "Read it whole: the Norms: and Baseline: lines, the stories, the test "
+        "cases, every phase.",
+        plan,
         "",
-        "## Implementer's report",
-        report_path,
+        "## Implementers' reports",
+        "Each one names the SHA its static checks ran at. Compare that against "
+        "HEAD before you re-run anything:",
+        reports_text,
+        "",
+        "## Baseline",
+        BASELINE_HOLE,
         "",
         "## Review package",
         commit_range_hole(plan),
         "",
-        "## Segment contract",
+        "## Frozen contracts",
         contract_path,
         "",
         "## Review criteria",
         criteria_path,
         "",
+        "## Your report",
+        os.path.join(evidence_dir, "report.md"),
+        "",
         "## Corrections",
         CORRECTED_HOLE,
         "",
-        "## Segment-specific warning",
+        "## Run-specific warning",
         WARNING_HOLE,
         "",
         "## Everything else",
-        "The order of work — path comparison, then the checks, then the "
-        "diff — the report contract and the fix-round behaviour are already "
-        "in this agent's own definition:",
+        "The order of work — the checks, then conformance, then integrity — "
+        "the four mandatory report sections, the finding classes and the "
+        "fix-round behaviour are already in this agent's own definition:",
         agent_file,
         "Nothing above restates them. Do not restate them back either.",
     ]
@@ -370,61 +432,70 @@ and do not proceed on the rest.
 """
 
 
+USAGE = ("usage: segment-dispatch PLAN_FILE RANGE [--force]\n"
+         "       segment-dispatch PLAN_FILE --gate-a [--force]")
+
+
 def main():
     argv = sys.argv[1:]
-    reviewer = "--reviewer" in argv
+    gate_a = "--gate-a" in argv
     force = "--force" in argv
-    positional = [a for a in argv if a not in ("--reviewer", "--force")]
-    if len(positional) != 2:
-        die("usage: segment-dispatch PLAN_FILE RANGE [--reviewer] [--force]", 2)
+    positional = [a for a in argv if a not in ("--gate-a", "--force")]
 
-    plan_arg, range_arg = positional
-    plan = os.path.abspath(plan_arg)
+    want = 1 if gate_a else 2
+    if len(positional) != want:
+        die(USAGE, 2)
+
+    plan = os.path.abspath(positional[0])
     if not os.path.isfile(plan):
-        die("no such plan file: %s" % plan_arg, 2)
-
-    first, last = parse_range(range_arg)
-    rng = "%d-%d" % (first, last)
-
-    with open(plan, "r", encoding="utf-8") as fh:
-        lines = fh.read().splitlines()
-
-    segments = topology_segments(lines)
-    if segments is None:
-        die("no '## Topology' section in %s\n  the model per segment and the "
-            "checkpoint's reason live in that table; without it there is "
-            "nothing to dispatch against" % plan, 3)
-
-    owner, spanning = find_owner(segments, first, last)
-    if owner is None:
-        if spanning:
-            names = ", ".join(
-                "segment %d (phases %s)" % (s.n, s.phases_raw) for s in spanning)
-            die("phases %s span more than one Topology segment: %s\n  "
-                "dispatch one Topology segment at a time" % (rng, names), 3)
-        existing = ", ".join(
-            "segment %d: phases %s" % (s.n, s.phases_raw) for s in segments)
-        die("no Topology row covers phases %s exactly.\n  rows in %s: %s"
-            % (rng, plan, existing or "(none)"), 3)
+        die("no such plan file: %s" % positional[0], 2)
 
     workspace = run_sibling("workspace", plan).strip()
     if not workspace:
         die("workspace produced no output for %s" % plan)
 
-    suffix = "review-dispatch" if reviewer else "dispatch"
-    out_path = os.path.join(workspace, "segment-%s-%s.md" % (rng, suffix))
+    agent_name = "gate-a" if gate_a else "implementer"
+    agent_file = os.path.join(PLUGIN_ROOT, "agents", "%s.md" % agent_name)
+
+    if gate_a:
+        out_path = os.path.join(workspace, "gate-a-dispatch.md")
+    else:
+        first, last = parse_range(positional[1])
+        rng = "%d-%d" % (first, last)
+        out_path = os.path.join(workspace, "segment-%s-dispatch.md" % rng)
+
     if os.path.exists(out_path) and not force:
         die("output file already exists: %s\n  the orchestrator may have "
             "already filled its holes; pass --force to overwrite anyway"
             % out_path, 4)
 
-    agent_name = "implement-review" if reviewer else "implementer"
-    agent_file = os.path.join(PLUGIN_ROOT, "agents", "%s.md" % agent_name)
-
-    if reviewer:
-        body = build_reviewer_body(plan, first, last, rng, owner, workspace, agent_file)
+    if gate_a:
+        body = build_gate_a_body(plan, workspace, agent_file)
     else:
-        body = build_implementer_body(plan, first, last, rng, owner, workspace, agent_file)
+        with open(plan, "r", encoding="utf-8") as fh:
+            lines = fh.read().splitlines()
+
+        segments = topology_segments(lines)
+        if segments is None:
+            die("no '## Topology' section in %s\n  the model per group of "
+                "phases and the reason its boundary sits there live in that "
+                "table; without it there is nothing to dispatch against"
+                % plan, 3)
+
+        owner, spanning = find_owner(segments, first, last)
+        if owner is None:
+            if spanning:
+                names = ", ".join(
+                    "row %d (phases %s)" % (s.n, s.phases_raw) for s in spanning)
+                die("phases %s span more than one Topology row: %s\n  "
+                    "dispatch one row at a time" % (rng, names), 3)
+            existing = ", ".join(
+                "row %d: phases %s" % (s.n, s.phases_raw) for s in segments)
+            die("no Topology row covers phases %s exactly.\n  rows in %s: %s"
+                % (rng, plan, existing or "(none)"), 3)
+
+        body = build_implementer_body(
+            plan, first, last, rng, owner, workspace, agent_file)
 
     hole_count = body.count(FILL)
     header = HEADER_TMPL % (

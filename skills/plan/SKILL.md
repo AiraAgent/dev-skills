@@ -76,7 +76,7 @@ dash — the dash is an assertion by the planner, not tidiness.
 | **Test seams** | where we check. Existing beats new, highest level that works, the ideal number of new seams is zero | implementer, reviewer |
 | **Paths and existing abstractions** | so nobody researches the codebase again | implementer, reviewer |
 | **Test cases** | what gets checked — and nothing outside it is | test writer, both gates |
-| **Topology** | segments, checkpoints, relations, the model per segment | orchestrator |
+| **Topology** | how the phases are grouped, their relations, the model per group | orchestrator |
 | **Phases** | bounded units of execution, seven fields each | implementer, reviewer |
 | **Final-gate scenarios** | the runtime projection of the test cases | the runtime gate, the human at acceptance |
 | **Ledger** | the run's record and its resume point after a compaction | orchestrator |
@@ -224,9 +224,10 @@ invisible omission.
 
 ### Sizing a phase
 
-The unit of review is a **segment**, and every phase in a segment is built by the
-same agent. Splitting phases therefore adds no cold start; only the planner pays,
-in fields written. The floor is meaning, not the cost of starting an agent.
+The unit of review is the **whole run** — one gate, over everything. Splitting
+phases therefore buys no extra scrutiny and costs no extra review; only the
+planner pays, in fields written. The floor is meaning, not the cost of starting
+an agent.
 
 The criterion comes from a field that is mandatory anyway:
 
@@ -280,8 +281,8 @@ divergence touches a field of the phase
 
 divergence touches only a step
 → the implementer adapts and continues
-→ the deviation goes into the segment report
-→ the orchestrator writes confirmed deviations into the plan at the checkpoint
+→ the deviation goes into its report, under ## Divergences
+→ the orchestrator writes confirmed deviations into the plan
 ```
 
 Unsure whether a field is touched? Treat it as touched and stop. An error in that
@@ -289,18 +290,18 @@ direction costs one visible, cheap stop instead of a silent divergence.
 
 ## Topology
 
-Number phases straight through. A checkpoint sits between them; a unit of
-dispatch is described as "phases 1–3". **Do not introduce a term for a group of
-phases** — in conversation about mechanics, "segment"; in the artifact, no new
-entity appears.
+Number phases straight through. A unit of dispatch is described as "phases 1–3".
+**Do not introduce a term for a group of phases** — in conversation about
+mechanics, "segment"; in the artifact, no new entity appears.
 
 **Verification is not needed after every phase.** Three phases — "add the icon
 file", "put the icon in the header", "clicking switches the theme" — where the
-first two are checked by grep and deserve neither a review nor a test. The one
-meaningful check goes after the third and closes all three.
+first two are checked by grep and deserve no test of their own. The one
+meaningful case goes after the third and closes all three.
 
-You **propose** where the checkpoints go; the human approves and corrects. This is
-one of the points where a human in the loop is mandatory.
+You **propose** where the boundaries go and which model builds each group; the
+human approves and corrects. This is one of the points where a human in the loop
+is mandatory.
 
 Two relations, marked by you and approved by the human:
 
@@ -345,24 +346,28 @@ phases to edit one file at once — "parallel by purpose, not by file" — and t
 permission is exactly where the collisions came from. Where paths intersect, the
 phases run Sequential.
 
-Assign the **model per segment** — Haiku or Sonnet by difficulty. The orchestrator
+Assign the **model per group** — Haiku or Sonnet by difficulty. The orchestrator
 executes the assignment and does not change it silently.
 
 ```markdown
-| Segment | Phases | Implementer | Why the checkpoint is here |
+| Segment | Phases | Implementer | Why the boundary is here |
 |---|---|---|---|
 | 1 | 1 | Sonnet | everything downstream builds on this contract |
-| 2 | 2, 3, 4 | Haiku | last one before the final gate |
+| 2 | 2, 3 | Haiku | the two sides of that contract, parallel, joined by 4 |
+| 3 | 4 | Sonnet | the join, and the last work before the gates |
 ```
+
+The column headings are fixed: the orchestrator reads this table mechanically.
 
 ## Dependencies are expressed in the producing phase
 
 If phase 3 relies on an interface from phase 1, that is written **in phase 1**:
 "interface `X` is public, the signature does not change, later work relies on it."
 
-That is the *Frozen for later phases* field. The union of those fields across a
-segment's phases is the **segment's output contract** — the thing a checkpoint
-reviewer may not change with an ordinary finding.
+That is the *Frozen for later phases* field. The union of those fields is the
+**frozen contract** — what a parallel group's two sides build against without
+seeing each other's code, and the one thing a review may not change with an
+ordinary finding.
 
 The rule doubles as a test of the split: if a constraint cannot be stated locally,
 the phases are cut in the wrong place and need regrouping — and that shows up at
@@ -466,9 +471,9 @@ Present the plan and take approval before anything is built. Show:
 
 - the user stories;
 - the phase list, one line each;
-- the topology: segments, checkpoints and their relations, with the reason for
-  each checkpoint, and for any Parallel group the frozen contract, the two
-  disjoint path sets and the join phase;
+- the topology: how the phases are grouped, the model on each group, and the
+  reason each boundary sits where it does — and for any Parallel group the frozen
+  contract, the two disjoint path sets and the join phase;
 - the test seams, as their own question;
 - the `Norms:` and `Baseline:` lines;
 - anything you settled by your own judgement rather than from the spec.

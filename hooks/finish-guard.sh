@@ -49,24 +49,24 @@ If this run is over, clear the marker: dev-skills:implement's scripts/run-state 
 # --- history surgery that belongs to dev-skills:finish ------------------------------
 if printf '%s' "$cmd" | grep -qE 'git[[:space:]]+reset[[:space:]]+(-[[:alnum:]]*[[:space:]]+)*--(hard|soft|mixed|merge|keep)'; then
   blocked "moving HEAD is dev-skills:finish's job." \
-    "The squash is 'finish squash <message file>' — it writes a recovery ref first and compares tree hashes after. To undo one: 'finish recover'. Unstaging a path ('git reset -- <path>') is not blocked."
+    "The squash is 'finish squash <message file>' — it records a numbered recovery ref first and compares tree hashes after. To undo one: 'finish recover' to list the attempts, then 'finish recover <attempt>'. Unstaging a path ('git reset -- <path>') is not blocked."
 fi
 
 if printf '%s' "$cmd" | grep -qE 'git[[:space:]]+rebase' \
    && ! printf '%s' "$cmd" | grep -qE 'git[[:space:]]+rebase[[:space:]]+--(continue|abort|skip|quit|edit-todo)'; then
   blocked "rebasing is dev-skills:finish's job." \
-    "Use 'finish rebase' — it reports how the base moved and whether it touched this run's paths, which decides whether the approvals still stand. Finishing an in-progress rebase (--continue / --abort / --skip) is not blocked."
+    "Use 'finish rebase' — it reports how the base moved and whether it touched this run's paths, which decides whether the acceptance still stands. Finishing an in-progress rebase (--continue / --abort / --skip) is not blocked."
 fi
 
 if printf '%s' "$cmd" | grep -qE 'git[[:space:]]+merge' \
    && ! printf '%s' "$cmd" | grep -qE 'git[[:space:]]+merge[[:space:]]+--(abort|continue|quit)'; then
   blocked "integrating is dev-skills:finish's job." \
-    "Use 'finish integrate --ff-only', after GATE 2. Fast-forward is the only mode offered: anything else means the base moved, and the answer to that is a rebase."
+    "Use 'finish integrate --ff-only', after the human's acceptance. Fast-forward is the only mode offered: anything else means the base moved, and the answer to that is a rebase."
 fi
 
 # --- things that destroy the run's recovery points --------------------------
 if printf '%s' "$cmd" | grep -qE 'git[[:space:]]+commit[[:space:]]+(.*[[:space:]])?--amend'; then
-  blocked "amending would move an already-reviewed range under the reviewer's feet." \
+  blocked "amending would move an already-read range under the gate's feet." \
     "Fixes land as separate commits on top. Everything collapses into one commit at dev-skills:finish anyway."
 fi
 
@@ -76,7 +76,7 @@ if printf '%s' "$cmd" | grep -qE 'git[[:space:]]+(branch[[:space:]]+(-[[:alnum:]
 fi
 
 if printf '%s' "$cmd" | grep -qE 'git[[:space:]]+push[[:space:]]+.*(--force([^-]|$)|--force-with-lease|[[:space:]]-f([[:space:]]|$))'; then
-  blocked "a force-push during a run rewrites what the reviewers already read." \
+  blocked "a force-push during a run rewrites what the gates already read." \
     "A rejected push means the remote moved. Investigate; force-push only on your human partner's explicit request, after the run is closed."
 fi
 

@@ -16,10 +16,17 @@
 #   finish rebase
 #   finish integrate --ff-only
 #   finish cleanup
-#   finish recover
+#   finish recover [ATTEMPT]
 set -euo pipefail
 
-RECOVERY_REF=refs/finish/recovery
+# Recovery refs are numbered per branch and never overwritten:
+#
+#   refs/dev-skills/recovery/<branch>/<attempt>
+#
+# A single ref could not survive a second squash — the second one would point it
+# at the first squashed commit, and the pre-squash state the ref existed to
+# reach would become unreachable at exactly the moment somebody wanted it.
+RECOVERY_ROOT=refs/dev-skills/recovery
 
 # commit-guard's own subject rule, copied deliberately.
 #
@@ -76,6 +83,36 @@ default_branch() {
     fi
   fi
   printf '%s' "$d"
+}
+
+recovery_prefix() {
+  printf '%s/%s' "$RECOVERY_ROOT" "$(git rev-parse --abbrev-ref HEAD)"
+}
+
+# The attempts recorded for this branch, in numeric order, as "<n>\t<sha>".
+recovery_attempts() {
+  local prefix
+  prefix="$(recovery_prefix)"
+  git for-each-ref --format='%(refname) %(objectname)' "$prefix/*" 2>/dev/null \
+    | while read -r ref sha; do
+        local n="${ref##*/}"
+        case "$n" in ''|*[!0-9]*) continue ;; esac
+        printf '%s\t%s\n' "$n" "$sha"
+      done | LC_ALL=C sort -n -k1,1
+}
+
+# Record HEAD as the next attempt. The empty <oldvalue> makes git refuse if the
+# ref already exists, so "never overwritten" is enforced by git rather than by
+# this script having computed the number correctly.
+record_recovery() {
+  local prefix max n ref
+  prefix="$(recovery_prefix)"
+  max="$(recovery_attempts | tail -1 | cut -f1)"
+  n=$(( ${max:-0} + 1 ))
+  ref="$prefix/$n"
+  git update-ref "$ref" HEAD "" \
+    || die "recovery ref $ref already exists — refusing to overwrite it; inspect it with 'finish recover' and clear it deliberately"
+  echo "recovery ref: $ref -> $(git rev-parse --short HEAD)"
 }
 
 assert_settled() {
@@ -148,7 +185,7 @@ assert_message_ok() {
 }
 
 cmd_squash() {
-  local msgfile base before after old_recovery
+  local msgfile base before after pre_squash
   msgfile="${1:-}"
   [ -n "$msgfile" ] && [ -f "$msgfile" ] || die "usage: finish squash MESSAGE_FILE"
   assert_message_ok "$msgfile"
@@ -157,22 +194,19 @@ cmd_squash() {
   resolve_marker
   base="$(marker_field base)"
   before="$(git rev-parse 'HEAD^{tree}')"
+  pre_squash="$(git rev-parse HEAD)"
 
-  if old_recovery="$(git rev-parse --verify --quiet "$RECOVERY_REF")"; then
-    echo "note: replacing an earlier recovery ref at ${old_recovery:0:7}"
-  fi
-  git update-ref "$RECOVERY_REF" HEAD
-  echo "recovery ref: $RECOVERY_REF -> $(git rev-parse --short HEAD)"
+  record_recovery
 
   git reset --soft "$base"
   git commit --cleanup=strip -F "$msgfile" --quiet
 
   after="$(git rev-parse 'HEAD^{tree}')"
   if [ "$before" != "$after" ]; then
-    die "tree hash changed across the squash ($before -> $after) — this cannot normally happen; recover with 'finish recover' and investigate"
+    die "tree hash changed across the squash ($before -> $after) — this cannot normally happen; recover with 'finish recover <attempt>' and investigate"
   fi
 
-  echo "squashed $(git rev-parse --short "$base")..$(git rev-parse --short "$RECOVERY_REF") into $(git rev-parse --short HEAD)"
+  echo "squashed $(git rev-parse --short "$base")..$(git rev-parse --short "$pre_squash") into $(git rev-parse --short HEAD)"
   echo "trees identical: $before"
 }
 
@@ -196,13 +230,16 @@ cmd_rebase() {
   if [ -n "$overlap" ]; then
     echo "the base touched paths this run also touched:"
     printf '%s\n' "$overlap" | sed 's/^/  /'
-    echo "→ final-review re-runs the affected scenarios, then the functional gate covers only those"
+    echo "→ gate B re-runs the affected cases, then acceptance covers only those"
   else
-    echo "no path overlap → both approvals stand"
+    echo "no path overlap → the acceptance stands"
   fi
 
+  # Recorded before the rebase, not after: what a recovery wants back is the
+  # state the rebase is about to rewrite.
+  record_recovery
+
   if git rebase "$new_base"; then
-    git update-ref "$RECOVERY_REF" HEAD
     sed -i.bak "s|^base=.*|base=$new_base|" "$MARKER" && rm -f "$MARKER.bak"
     echo "rebased; run base updated to $(git rev-parse --short "$new_base")"
   else
@@ -214,7 +251,7 @@ cmd_rebase() {
 
 cmd_integrate() {
   [ "${1:-}" = "--ff-only" ] || die "usage: finish integrate --ff-only (no other mode is offered)"
-  local def branch main_root
+  local def branch main_root was out
   def="$(default_branch)"
   [ -n "$def" ] || die "cannot resolve the default branch"
   branch="$(git rev-parse --abbrev-ref HEAD)"
@@ -223,12 +260,35 @@ cmd_integrate() {
   main_root="$(cd "$common/.." && pwd -P)"
   git -C "$main_root" rev-parse --verify --quiet "$def" >/dev/null || die "no local $def to integrate into"
 
-  git -C "$main_root" checkout --quiet "$def"
-  if git -C "$main_root" merge --ff-only "$branch"; then
+  # Whether a fast-forward is possible is decided here, from the graph alone,
+  # before anything in the main checkout is touched. Deciding it from the exit
+  # code of the checkout or the merge is what produced "not a fast-forward — the
+  # base has moved" for a failure that was nothing of the kind: an untracked
+  # file in the main checkout standing where a tracked one was about to land.
+  # That message sends the human to `finish rebase`, which cannot help, and it
+  # hides the one thing they need to know — which file is in the way.
+  if ! git merge-base --is-ancestor "$def" "$branch"; then
+    die "not a fast-forward — $def has moved; rebase first (finish rebase)"
+  fi
+
+  was="$(git -C "$main_root" rev-parse --abbrev-ref HEAD)"
+  if ! out="$(git -C "$main_root" checkout "$def" 2>&1)"; then
+    die "cannot check out $def in the main checkout ($main_root).
+$def is an ancestor of $branch, so the history is fine — git is refusing for
+another reason, and it is below verbatim. An untracked file in the way is the
+usual one; commit or remove it there and run this again.
+
+$out"
+  fi
+
+  if out="$(git -C "$main_root" merge --ff-only "$branch" 2>&1)"; then
     echo "integrated $branch into $def (fast-forward)"
   else
-    git -C "$main_root" checkout --quiet -
-    die "not a fast-forward — $def has moved; rebase first (finish rebase)"
+    git -C "$main_root" checkout --quiet "$was" 2>/dev/null || true
+    die "the merge into $def failed even though it is a fast-forward by the
+graph. git's own reason, verbatim:
+
+$out"
   fi
 }
 
@@ -246,12 +306,35 @@ cmd_cleanup() {
   echo "removed worktree $wt"
 }
 
+# An attempt is required. There is no default, and "the latest" is not one
+# either: a run that squashed twice has two states worth reaching, and guessing
+# which one wanted resetting is how a recovery destroys the thing it was called
+# to save. With no argument this prints what exists and changes nothing.
 cmd_recover() {
-  local ref
-  ref="$(git rev-parse --verify --quiet "$RECOVERY_REF")" || die "no recovery ref — nothing to recover"
-  echo "resetting to $(git rev-parse --short "$ref") (the state before the squash)"
+  local want attempts ref prefix
+  want="${1:-}"
+  prefix="$(recovery_prefix)"
+  attempts="$(recovery_attempts)"
+  [ -n "$attempts" ] || die "no recovery ref under $prefix/ — nothing to recover"
+
+  if [ -z "$want" ]; then
+    echo "recovery attempts on this branch, newest last:"
+    printf '%s\n' "$attempts" | while IFS=$'\t' read -r n sha; do
+      printf '  %s  %s  %s\n' "$n" "$(git rev-parse --short "$sha")" \
+        "$(git log -1 --format=%s "$sha")"
+    done
+    echo "name one: finish recover <attempt>"
+    exit 2
+  fi
+
+  case "$want" in ''|*[!0-9]*) die "attempt must be a number; got '$want'" ;; esac
+  ref="$prefix/$want"
+  git rev-parse --verify --quiet "$ref" >/dev/null \
+    || die "no attempt $want on this branch — run 'finish recover' with no argument to see what there is"
+
+  echo "resetting to $(git rev-parse --short "$ref") (attempt $want)"
   git reset --hard "$ref"
-  echo "recovered; the recovery ref is left in place at $RECOVERY_REF"
+  echo "recovered; every recovery ref is left in place"
 }
 
 case "${1:-}" in
@@ -262,7 +345,7 @@ case "${1:-}" in
   cleanup)   shift; cmd_cleanup "$@" ;;
   recover)   shift; cmd_recover "$@" ;;
   *)
-    echo "usage: finish {preflight|squash MESSAGE_FILE|rebase|integrate --ff-only|cleanup|recover}" >&2
+    echo "usage: finish {preflight|squash MESSAGE_FILE|rebase|integrate --ff-only|cleanup|recover [ATTEMPT]}" >&2
     exit 2
     ;;
 esac

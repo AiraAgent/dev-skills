@@ -9,9 +9,101 @@
 # into a tree that cannot start — and they walk into it after every line of code
 # is already written.
 #
+# With --parallel it answers a different question, before a parallel group is
+# dispatched rather than before the run: do these phases' write-sets intersect?
+# The plan admits a group only where they do not, and this is where that stops
+# being a claim. Intersecting means the group does not run — the topology is
+# corrected out loud, never changed quietly.
+#
 # Usage: preflight [PLAN_FILE]
-# Exit:  0 clean · 1 findings printed · 2 not a git repository
+#        preflight --parallel PLAN_FILE RANGE RANGE [RANGE...]
+# Exit:  0 clean (or the write-sets are disjoint)
+#        1 findings printed (or the write-sets intersect)
+#        2 not a git repository, or the arguments are wrong
 set -uo pipefail
+
+# --- the write-sets of a parallel group ------------------------------------
+# A phase's write-set is its Changes field: one bullet per path, the path being
+# the first backticked token on the line. Anything a phase names outside a
+# backtick is prose about the path, not another path.
+changes_paths() {
+  local plan="$1" first="$2" last="$3"
+  awk -v first="$first" -v last="$last" '
+    /^```/ { fence = !fence; next }
+    fence { next }
+
+    /^###[ \t]+Phase[ \t]+[0-9]+/ {
+      n = $0; sub(/^###[ \t]+Phase[ \t]+/, "", n); sub(/[^0-9].*$/, "", n)
+      inrange = (n + 0 >= first && n + 0 <= last)
+      infield = 0
+      next
+    }
+
+    /^\*\*[A-Z]/ {
+      infield = (inrange && $0 ~ /^\*\*Changes\*\*/)
+      next
+    }
+
+    infield && /`/ {
+      line = $0
+      if (match(line, /`[^`]+`/)) {
+        p = substr(line, RSTART + 1, RLENGTH - 2)
+        if (p != "" && p !~ /^—$/) print p
+      }
+    }
+  ' "$plan" | LC_ALL=C sort -u
+}
+
+cmd_parallel() {
+  local plan="$1"
+  shift
+  [ -f "$plan" ] || { echo "no such plan file: $plan" >&2; exit 2; }
+  [ $# -ge 2 ] || { echo "usage: preflight --parallel PLAN_FILE RANGE RANGE [RANGE...]" >&2; exit 2; }
+
+  local ranges=("$@") tmp i j
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "$tmp"' EXIT
+
+  local r first last
+  for i in "${!ranges[@]}"; do
+    r="${ranges[$i]}"
+    case "$r" in
+      *[0-9]-[0-9]*) first=${r%%-*}; last=${r##*-} ;;
+      *[!0-9]*)      echo "bad RANGE: $r (want 3 or 2-4)" >&2; exit 2 ;;
+      *)             first=$r; last=$r ;;
+    esac
+    [ "$first" -le "$last" ] 2>/dev/null || { echo "bad RANGE: $r" >&2; exit 2; }
+    changes_paths "$plan" "$first" "$last" > "$tmp/$i"
+    echo "phases ${r}: $(wc -l < "$tmp/$i" | tr -d ' ') path(s)"
+    sed 's/^/  /' "$tmp/$i"
+  done
+
+  local clashes=0 overlap
+  for i in "${!ranges[@]}"; do
+    for j in "${!ranges[@]}"; do
+      [ "$i" -lt "$j" ] || continue
+      overlap="$(comm -12 "$tmp/$i" "$tmp/$j")"
+      [ -n "$overlap" ] || continue
+      clashes=$((clashes + 1))
+      echo "intersect: phases ${ranges[$i]} and phases ${ranges[$j]} both write:"
+      printf '%s\n' "$overlap" | sed 's/^/  /'
+    done
+  done
+
+  if [ "$clashes" -eq 0 ]; then
+    echo "write-sets disjoint — the group may run in parallel"
+    exit 0
+  fi
+  echo "the group does not run in parallel — correct the plan or run these phases" >&2
+  echo "sequentially, and write down which you chose" >&2
+  exit 1
+}
+
+if [ "${1:-}" = "--parallel" ]; then
+  shift
+  [ $# -ge 1 ] || { echo "usage: preflight --parallel PLAN_FILE RANGE RANGE [RANGE...]" >&2; exit 2; }
+  cmd_parallel "$@"
+fi
 
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not a git repository" >&2; exit 2; }
 gitdir="$(git rev-parse --git-dir 2>/dev/null)"
@@ -61,6 +153,15 @@ ignore="$root/.gitignore"
 if [ ! -f "$ignore" ] || ! grep -qxF '.ai-workflow' "$ignore"; then
   printf '.ai-workflow\n' >> "$ignore"
   echo "fixed: added '.ai-workflow' to .gitignore (no trailing slash — it is a symlink in a worktree)"
+fi
+
+# An untracked .gitignore is a trap this script used to set itself: it creates
+# the file above, the run commits it on the branch, and integration then fails
+# in the main checkout, where an untracked copy of the same path is in the way.
+# git reports that as a refused checkout, which reads like the base has moved.
+# Naming it here costs one commit now instead of a wrong diagnosis later.
+if ! git ls-files --error-unmatch -- "$ignore" >/dev/null 2>&1; then
+  add ".gitignore is not tracked — commit it before the run, or integration collides with the untracked copy in the main checkout"
 fi
 
 if [ "$gitdir" != "$common" ] && [ ! -e "$root/.ai-workflow" ]; then

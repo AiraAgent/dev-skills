@@ -3,12 +3,15 @@
 # extended context, written to a file the reviewer reads in one call. The output
 # never enters the orchestrator's context.
 #
-# Use the BASE recorded before the segment was dispatched — never HEAD~1, which
-# silently truncates a multi-commit segment.
+# BASE is the run's own base — the one `run-state begin` recorded — so the
+# package is the whole of what the run produced. There are no checkpoint reviews
+# to slice it for: gate A judges the assembled range, which is the only way the
+# smells that live between phases are visible at all. Never HEAD~1, which
+# silently truncates the run to its last commit.
 #
 # Usage: review-package PLAN_FILE BASE HEAD [OUTFILE]
 # Default OUTFILE: <workspace>/review-<base7>..<head7>.diff — named per range, so
-# a re-review after fixes gets its own fresh file.
+# a re-run after fixes gets its own fresh file.
 set -euo pipefail
 
 if [ $# -lt 3 ] || [ $# -gt 4 ]; then
@@ -39,8 +42,9 @@ fi
   echo
   echo "## Files changed"
   echo
-  echo "Compare this list against the union of the segment's Changes fields."
-  echo "A path outside that union is a finding before any code is read."
+  echo "Compare this list against the union of the Changes fields of every"
+  echo "phase in the plan. A path outside that union is a finding before any"
+  echo "code is read."
   echo
   git diff --name-only "${base}..${head}"
   echo

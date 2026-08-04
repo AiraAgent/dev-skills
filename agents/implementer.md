@@ -77,31 +77,46 @@ abstraction you were told to use is not there, that is a `PLAN_CONFLICT`.
   you actually get, even when it disagrees with the brief. Never edit a
   checker, an allowlist, or the code under test to manufacture the predicted
   figure.
-- **Never run the whole sweep.** Run the focused tests for what you changed.
-- You are **not required to report test numbers.** The reviewer runs the checks
-  itself and takes nobody's word, yours included.
+- **Never run the whole sweep** while you are working. Run the focused tests for
+  what you changed.
+- **Run the full static checks last**, after your final commit, and record the
+  SHA you ran them at. Gate A compares that SHA against `HEAD`: if they match it
+  takes your numbers and runs nothing, and if they do not it runs everything
+  itself. Checks run before one more commit are checks nobody can use.
+- Your numbers are **a signal to yourself, not evidence for the gate.** The gate
+  re-derives whatever it needs from the tree. The SHA is what buys it the right
+  to skip a re-run, and only while the tree has not moved.
 
 ## Writing, when others may be writing too
 
-Phases in your segment may be marked parallel with phases another agent is
-building in **the same working tree**.
+Your phase may belong to a **parallel group**: two or more phases built at once,
+from one `HEAD`, in **the same working tree**.
 
-- Edit by **targeted replacement**. On a stale anchor it fails; re-read the file
-  and retry. A collision must surface as a refusal, never as silent loss.
-- **Do not `Write` over an existing file.** A whole-file rewrite swallows a
-  neighbour's edits without a word.
-- **No autoformat or autofix across a whole file.** Same effect. Formatting
-  happens at the checkpoint.
+The plan admits a group only where the write-sets are disjoint and the contract
+between the sides is already frozen. So there is no neighbour's anchor to go
+stale under you, and no shared file to race for. What is left is this:
+
+- **Edit only the paths your own phase names.** Everything else in that tree
+  belongs to somebody working blind, exactly as you are.
+- **You do not commit.** The orchestrator compares the group's actual paths
+  against the union of the phases' *Changes*, runs the checks, and makes one
+  join commit. Committing yourself would put a half-built group into the range.
+- **Do not `Write` over an existing file**, and no autoformat or autofix across
+  a whole file. Either one swallows a neighbour's edits without a word.
+- **You never read the other side's code.** You both build against the frozen
+  contract; going to look means the contract was not enough, and that is worth
+  reporting rather than working around.
 
 ## Committing
 
 - **Stage only the paths you changed yourself.** `git add -A`, `git add .` and
   `git commit -a` are refused by `commit-guard`; Conventional Commits are
   required.
-- Commit when the segment is built, before any verdict. That commit is also the
-  run's recovery point.
+- Commit when the segment is built. That commit is also the run's recovery point.
+  **In a parallel group you do not commit at all** — the orchestrator makes the
+  join commit for the whole group.
 - Fixes land as **separate commits on top**. Never `amend` — it would move a
-  range a reviewer has already read, and `finish-guard` refuses it.
+  range the gate has already read, and `finish-guard` refuses it.
 - A race for `index.lock` is harmless: git errors, you retry.
 - **`branch-guard` refuses commits on the default branch.** Hitting it means you
   are in the wrong tree — report `BLOCKED` rather than working around it.
@@ -111,13 +126,43 @@ building in **the same working tree**.
 Write the full report to the path the dispatch names:
 
 - what you built, per phase;
+- a `## Self-check` section — see below;
 - a `## Divergences` section — every report carries this heading, with no
   exception. Put anything you adapted because a step did not fit there, with
   the reason: this is where a step-level divergence is recorded. Nothing to
   report? Say so under the heading, in words — an omitted section and an
   empty one must not read alike;
-- the static checks you ran and what they said;
+- the static checks you ran, what they said, **and the SHA you ran them at**,
+  with the commands;
 - anything you noticed outside your phases, as observations, never as edits.
+
+### `## Self-check`
+
+One pass over your own work, per phase:
+
+- **is *Becomes true* true — in words**, not as a tick. "The toggle switches the
+  theme and the choice survives a reload" is an answer; "✓" is not, because it
+  can be written without looking.
+- **the paths you actually wrote**, compared against *Changes*.
+- **the state of each of your test cases**, by ID.
+
+Take the paths from an **explicit list of your own commit SHAs**:
+
+```bash
+git show --format= --name-only <sha1> <sha2> … | sort -u
+```
+
+**The range form `<your first commit>^..HEAD` is forbidden.** A parallel group
+shares one working tree; the range would sweep in a neighbour's commits and hand
+you a false `PLAN_CONFLICT` over paths you never touched.
+
+Found a divergence? **Fix it, and record it anyway** under `## Divergences`.
+A self-check you are allowed to fix quietly is a place where the report gets
+tuned to the checklist instead of to the work. A phase *field* touched is not
+yours to fix at all — that is a `PLAN_CONFLICT`.
+
+In a fix round, check only the SHAs from that round, and only the phases the
+findings touch.
 
 Then return **only**, under 15 lines: status, the commits you created, the report
 path, and any `PLAN_CONFLICT` in one sentence. The detail lives in the file; the

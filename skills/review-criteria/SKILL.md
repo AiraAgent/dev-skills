@@ -8,7 +8,7 @@ description: The shared standard for what counts as a review finding. Not a work
 This skill exists to give one file a stable, installed path. It runs nothing.
 
 The material is in [CRITERIA.md](references/CRITERIA.md), one level below this file. Three seats
-read it — `dev-skills:implement-review`, `dev-skills:final-review` and `dev-skills:review` — and each is
+read it — `dev-skills:gate-a`, `dev-skills:gate-b` and `dev-skills:review` — and each is
 handed the path by whoever dispatches it.
 
 Everything else in `references/` is that reference. There is no procedure here

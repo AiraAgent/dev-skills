@@ -1,4 +1,4 @@
-# A fixture plan for segment-contract
+# A fixture plan for parallel-contract
 
 Four phases, numbered straight through. Reused by later phases as generic
 plan input — its phase numbering and field spelling do not change.

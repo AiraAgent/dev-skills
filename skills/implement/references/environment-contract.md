@@ -42,7 +42,7 @@ no test framework" is a fact and it is worth a line.
 
 A fresh working tree does not run. It has no installed dependencies and none of
 the untracked local files the project needs. Without these two fields, both
-gates that need a live system — `dev-skills:final-review` and the human's functional gate —
+gates that need a live system — `dev-skills:gate-b` and the human's acceptance —
 walk into a tree that cannot start, and they walk into it *after* all the code
 is written.
 

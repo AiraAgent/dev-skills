@@ -1,8 +1,8 @@
-diff --git a/skills/implement/scripts/segment-contract b/skills/implement/scripts/segment-contract
-index bc4af41..cf4e3f6 100755
---- a/skills/implement/scripts/segment-contract
-+++ b/skills/implement/scripts/segment-contract
-@@ -45,8 +45,6 @@ esac
+diff --git a/skills/implement/scripts/parallel-contract b/skills/implement/scripts/parallel-contract
+index bfb9abe..9c34f54 100755
+--- a/skills/implement/scripts/parallel-contract
++++ b/skills/implement/scripts/parallel-contract
+@@ -34,8 +34,6 @@ esac
  [ "$first" -le "$last" ] 2>/dev/null || { echo "bad RANGE: $range" >&2; exit 2; }
  
  body=$(awk -v first="$first" -v last="$last" '

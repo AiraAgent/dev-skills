@@ -1,17 +1,16 @@
 diff --git a/skills/finish/scripts/finish b/skills/finish/scripts/finish
-index 758cfd6..93ca9fc 100755
+index 2563299..de7feb1 100755
 --- a/skills/finish/scripts/finish
 +++ b/skills/finish/scripts/finish
-@@ -161,11 +161,11 @@ cmd_squash() {
-   if old_recovery="$(git rev-parse --verify --quiet "$RECOVERY_REF")"; then
-     echo "note: replacing an earlier recovery ref at ${old_recovery:0:7}"
-   fi
--  git update-ref "$RECOVERY_REF" HEAD
-   echo "recovery ref: $RECOVERY_REF -> $(git rev-parse --short HEAD)"
+@@ -196,10 +196,9 @@ cmd_squash() {
+   before="$(git rev-parse 'HEAD^{tree}')"
+   pre_squash="$(git rev-parse HEAD)"
  
+-  record_recovery
+-
    git reset --soft "$base"
    git commit --cleanup=strip -F "$msgfile" --quiet
-+  git update-ref "$RECOVERY_REF" HEAD
++  record_recovery
  
    after="$(git rev-parse 'HEAD^{tree}')"
    if [ "$before" != "$after" ]; then

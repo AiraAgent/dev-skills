@@ -9,6 +9,7 @@
 #
 # gitfixture_new     -> prints the repository path
 # gitfixture_plan REPO [SRC]   -> writes a plan file, prints its path
+# gitfixture_gitignore REPO    -> commits a .gitignore carrying .ai-workflow
 # gitfixture_dirty REPO        -> leaves one staged and one unstaged change
 # gitfixture_commit REPO MSG   -> one commit, prints its SHA
 # gitfixture_branch REPO NAME  -> creates and checks out a branch
@@ -67,6 +68,17 @@ gitfixture_plan() {
     printf '# Fixture Plan\n' > "$dest"
   fi
   echo "$dest"
+}
+
+# The state preflight wants to find rather than have to create: the ignore line
+# already there, and the file already tracked. A fixture without this is the
+# untracked-.gitignore case, which is a finding in its own right.
+gitfixture_gitignore() {
+  local repo="$1"
+  _gitfixture_guard "$repo" || return 1
+  printf '.ai-workflow\n' > "$repo/.gitignore"
+  git -C "$repo" add .gitignore
+  git -C "$repo" commit -q -m "chore: ignore .ai-workflow"
 }
 
 gitfixture_dirty() {

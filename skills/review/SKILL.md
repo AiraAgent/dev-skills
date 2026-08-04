@@ -18,8 +18,8 @@ taste as findings — exactly what the reviewers inside a run are constrained
 against. A review that mixes cited defects with preferences costs more to read
 than it saves, because someone has to re-derive which is which.
 
-This skill reads the same criteria file that `dev-skills:implement-review` and
-`dev-skills:final-review` read. Sharpening the standard sharpens all three, and none of them
+This skill reads the same criteria file that `dev-skills:gate-a` and
+`dev-skills:gate-b` read. Sharpening the standard sharpens all three, and none of them
 can drift from the others.
 
 ## Scope comes from the human

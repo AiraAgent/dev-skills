@@ -5,8 +5,8 @@ this file, and nothing else defines what a finding is:
 
 | Seat | Where its scope comes from |
 |---|---|
-| `dev-skills:implement-review` | the plan — the **fields** of the phases in one segment |
-| `dev-skills:final-review` | the plan's final-gate scenarios, driven on a running system |
+| `dev-skills:gate-a` | the plan — the **fields** of every phase, over the whole `BASE..HEAD` |
+| `dev-skills:gate-b` | the plan's executable test cases, driven on a running system |
 | `dev-skills:review` | whatever the human pointed at — a PR, a file, a tree |
 
 One file, so sharpening the standard sharpens all three at once and none of them
@@ -30,9 +30,9 @@ Cannot show the source? It is not a finding, and it is not written down.
 The rule exists because correctness is settled before any code is read — the
 reviewer runs the checks first — so what remains is the territory of taste, and
 the search for smells has no natural floor. Without a source requirement,
-"green means no remarks" buys a fix round at every checkpoint, and buys it
-invisibly: the human is *on* the loop, not in it, and never sees the round that
-was not worth running.
+"green means no remarks" buys a fix round for nothing, and buys it invisibly:
+the human is *on* the loop, not in it, and never sees the round that was not
+worth running.
 
 ## Two classes of finding, and what each one costs
 
@@ -78,11 +78,18 @@ finding immediately.
 
 This runs first because going out of bounds is improvisation in observable form,
 and catching it needs no judgement at all — two lists, compared. It is the only
-defence against a weak model that rests on nothing but git.
+defence against a weak model that rests on nothing but git, so it is never taken
+from a report: the actor it defends against is the actor that wrote the report.
 
 Then the checks — tests, lint, typecheck, build. Red goes straight back to the
 implementer; the code is not read. Debugging stack traces and build noise is not
-the reviewer's work, and hunting smells in a segment whose tests fail is wasted.
+the reviewer's work, and hunting smells in a tree whose tests fail is wasted.
+
+**Red the plan predicted is not red the run caused.** Where the plan carries a
+`Baseline:` line, it says what these commands produced before any work started —
+inherited errors, a build that was already broken, a failing test committed on
+purpose. Judge the delta. No `Baseline:` line asserts everything was green
+beforehand, and then any red belongs to the run.
 
 ## Tests are part of the diff
 
@@ -173,8 +180,10 @@ the ladder would make those plans *easier* to pass than they are now.
   a `PLAN_CONFLICT`, not a finding: it stops and goes to the orchestrator, who
   takes it to the human. Do not quietly overrule the plan, and do not quietly
   swallow the defect because the plan asked for it.
-- **A decision an earlier segment already closed.** Accepted work is not
-  reopened; the reviewer confirms the related phases were checked and moves on.
+- **A decision an earlier round already closed.** Accepted work is not reopened;
+  the reviewer confirms the related phases were checked and moves on. An
+  `ADVISORY` you raised once and nobody acted on does not become a `BLOCKER` by
+  being raised again.
 - **Anything tooling enforces.** Formatting a linter fixes is not review.
 - **A norm the ladder does not reach.** Style no approved document states and no
   plan names. That is the producible-source rule, and it is the most common way
@@ -188,16 +197,17 @@ conversation about the finding, not in the decision whether to raise it.
 
 ## The frozen contract
 
-A checkpoint reviewer **never changes the segment's declared output contract**
-through an ordinary finding. That contract is the union of the *frozen for later
-phases* fields of the segment's phases: the names, signatures and data shapes
-that later phases were told to build on.
+A review **never changes a frozen contract** through an ordinary finding. That
+contract is the union of the *frozen for later phases* fields: the names,
+signatures and data shapes later phases were told to build on.
 
 Needing one of them changed is a `PLAN_CONFLICT` — it stops and escalates. It is
 not a finding, because a later phase has already been briefed against it, and a
 review that quietly renames it leaves the next implementer looking for an
-abstraction that no longer exists.
+abstraction that no longer exists. In a parallel group it is worse than that:
+both sides built against the frozen names without ever seeing each other's code,
+so the contract is the only thing that made the group safe to run at all.
 
-Only what is explicitly named in those fields is frozen. Everything else the
-segment produced is ordinary territory — otherwise this rule would stop being a
-guard on asynchrony and start being a ban on findings.
+Only what is explicitly named in those fields is frozen. Everything else is
+ordinary territory — otherwise this rule would stop being a guard on the
+contract and start being a ban on findings.
