@@ -11,7 +11,7 @@ Two parts, different in kind:
 | | Where it lives | Who writes it |
 |---|---|---|
 | **Permanent** — how the project runs at all | `CLAUDE.md` | the human, once, prompted by preflight |
-| **One-off** — what gets clicked through for *this* task | the plan's *final-gate scenarios* | the planner, approved by the human |
+| **One-off** — what gets clicked through for *this* task | the plan's *final-gate scenarios*, which project its approved test cases | the planner, from cases the human approved |
 
 Only the permanent part is described here.
 
@@ -66,7 +66,7 @@ or `link` is absent, it **stops and asks — once** — and records the answer i
 
 Not a guess: a guessed bootstrap fails somewhere in the middle and leaves a tree
 that is half-prepared. Not a skip either: skipping moves the failure to the
-final gate, which is the most expensive place in the run to discover that
+runtime gate, which is the most expensive place in the run to discover that
 nothing starts.
 
 Asking once is the point of writing it down. The second run in this repository

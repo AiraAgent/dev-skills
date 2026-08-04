@@ -50,7 +50,7 @@ EOF
 # run_preflight REPO [ARGS...] — sets $out and $rc in the caller. Called as a
 # plain statement, never wrapped in $(...): $rc has to survive the call, and
 # wrapping the call itself in command substitution would fork a subshell that
-# loses it (test/cli/segment-contract.test.sh's run_to_file hit the same
+# loses it (test/cli/parallel-contract.test.sh's run_to_file hit the same
 # thing; the fix there is the same one applied here).
 run_preflight() {
   local repo="$1"

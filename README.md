@@ -7,9 +7,11 @@ and you find that out after reading the diff.
 
 dev-skills puts a sequence between the idea and the commit. You say what you
 want; it asks questions until you both mean the same thing. That agreement
-becomes a plan you approve before anything is built. The plan is built in
-segments, and every segment is judged by an agent that did not write it. What
-lands is one commit, on its own branch, that you read before it goes anywhere.
+becomes a plan you approve before anything is built, and a set of test cases you
+approve alongside it — whatever is not in them is not checked. Then it builds,
+and two gates that did not write any of it judge the result: one on the code, one
+on the running system. What lands is one commit, on its own branch, that you read
+before it goes anywhere.
 
 ## A run, end to end
 
@@ -17,14 +19,16 @@ lands is one commit, on its own branch, that you read before it goes anywhere.
    you asked for and the thing that was heard are the same thing. No document,
    no code: it ends in agreement, and then a stop.
 2. **[`dev-skills:plan`](skills/plan/SKILL.md)** — that agreement written down
-   as a contract precise enough for someone who never saw the conversation.
-   You approve it, or you send it back.
+   as a contract precise enough for someone who never saw the conversation. You
+   approve it, or you send it back; then the test cases are grilled out of you
+   in the same sitting, and you approve those too.
 3. **[`dev-skills:implement`](skills/implement/SKILL.md)** — a branch or a
-   worktree first, then one agent per segment to build it and a second, on a
-   clean context, to judge it. The reviewer never fixes anything; it reports,
-   and the segment goes back.
+   worktree first, then the tests, then the phases. At the end two gates on
+   clean contexts: one reads the whole range against the plan, one drives the
+   approved cases on a live system. Neither fixes anything; they report, and
+   only a blocker buys a fix round.
 4. **[`dev-skills:finish`](skills/finish/SKILL.md)** — the run collapses into a
-   single commit, you read it, and it integrates.
+   single commit, you read exactly that commit, and it integrates.
 
 Nothing on that list starts by itself. All four are marked
 `disable-model-invocation`, so Claude cannot reach for them: a run begins
@@ -54,8 +58,8 @@ every relevant tool call, whether or not a run is open:
   refused too, as are Claude attribution trailers.
 - **History, while a run is open.** `reset --hard`, `rebase`, `merge` and
   `--amend` belong to [`dev-skills:finish`](skills/finish/SKILL.md), which
-  writes a recovery ref before it touches anything. Outside a run the hook is
-  silent, so ordinary work in ordinary repositories is unaffected.
+  records a numbered recovery ref before it touches anything. Outside a run the
+  hook is silent, so ordinary work in ordinary repositories is unaffected.
 - **The default branch.** In a repository carrying a `.branch-guard` file,
   edits and commits on `main` are blocked until the work is on a branch of its
   own.
@@ -75,8 +79,8 @@ Then restart the session. The repository carries its own
 marketplace holding exactly one plugin — itself. Claude Code clones it, keeps it
 current, and `/plugin uninstall dev-skills` takes it back out again.
 
-Installing also brings three subagents — `implementer`, `implement-review` and
-`final-review` — which [`dev-skills:implement`](skills/implement/SKILL.md)
+Installing also brings four subagents — `test-writer`, `implementer`, `gate-a`
+and `gate-b` — which [`dev-skills:implement`](skills/implement/SKILL.md)
 dispatches and you never call directly, and the hooks above
 ([`hooks/hooks.json`](hooks/hooks.json)).
 
@@ -96,7 +100,7 @@ that the pipeline reads as it works. Each one documents its own use inside its
 | [`dev-skills:grill`](skills/grill/SKILL.md) | interview an idea into a shared understanding before anything is planned |
 | [`dev-skills:grill-with-docs`](skills/grill-with-docs/SKILL.md) | grilling that also captures glossary terms and ADRs as they settle |
 | [`dev-skills:guardrails`](skills/guardrails/SKILL.md) | set up Claude Code hooks that block dangerous git commands |
-| [`dev-skills:implement`](skills/implement/SKILL.md) | execute an approved plan, from workspace through the final gate |
+| [`dev-skills:implement`](skills/implement/SKILL.md) | execute an approved plan, from workspace through both gates |
 | [`dev-skills:improve`](skills/improve/SKILL.md) | scan a codebase for deepening opportunities, then work through one |
 | [`dev-skills:merge-conflicts`](skills/merge-conflicts/SKILL.md) | resolve an in-progress git merge or rebase conflict |
 | [`dev-skills:plan`](skills/plan/SKILL.md) | write the implementation plan a cold, cheap implementer can build from |
@@ -104,7 +108,7 @@ that the pipeline reads as it works. Each one documents its own use inside its
 | [`dev-skills:prototype`](skills/prototype/SKILL.md) | build a throwaway prototype to answer a design question |
 | [`dev-skills:refactor`](skills/refactor/SKILL.md) | restructure, migrate, or upgrade code without changing its behaviour |
 | [`dev-skills:research`](skills/research/SKILL.md) | investigate a question against primary sources and capture the findings |
-| [`dev-skills:review`](skills/review/SKILL.md) | review code against the same criteria the pipeline's own reviewers use |
+| [`dev-skills:review`](skills/review/SKILL.md) | review code against the same criteria the pipeline's own gates use |
 | [`dev-skills:review-criteria`](skills/review-criteria/SKILL.md) | the shared standard for what counts as a review finding |
 | [`dev-skills:scout`](skills/scout/SKILL.md) | map unfamiliar code and answer a specific question about it, read-only |
 | [`dev-skills:spec`](skills/spec/SKILL.md) | write the spec that holds a body of work too large for one plan |

@@ -137,7 +137,7 @@ def parse_table(table_lines):
         col("segment"), col("phase"), col("implementer"), col("why"))
     if None in (seg_i, phase_i, model_i, why_i):
         die("the Topology table is missing an expected column "
-            "(Segment, Phases, Implementer, Why the checkpoint is here); "
+            "(Segment, Phases, Implementer, Why the boundary is here); "
             "header found: %s" % header, 3)
 
     segments = []

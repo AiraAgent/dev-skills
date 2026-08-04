@@ -1,6 +1,6 @@
 ---
 name: review-criteria
-description: The shared standard for what counts as a review finding. Not a workflow — a reference three review seats read so the standard has nowhere to drift.
+description: The shared standard for what counts as a review finding. Not a workflow — a reference the two gates and the standalone review all read, so the standard has nowhere to drift.
 ---
 
 # Review criteria

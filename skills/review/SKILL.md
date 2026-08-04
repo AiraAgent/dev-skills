@@ -1,6 +1,6 @@
 ---
 name: review
-description: Review code the human points at — a PR, a branch, a file, a tree — against the same criteria the pipeline's reviewers use. Outside a run, and it never fixes anything. Invoke to have code judged rather than built.
+description: Review code the human points at — a PR, a branch, a file, a tree — against the same criteria the pipeline's gates use. Outside a run, and it never fixes anything. Invoke to have code judged rather than built.
 ---
 
 # Reviewing code on request
@@ -14,7 +14,7 @@ criteria."
 ## Why this exists next to the built-in review
 
 The built-in review does not know the **producible-source rule**, so it offers
-taste as findings — exactly what the reviewers inside a run are constrained
+taste as findings — exactly what the gates inside a run are constrained
 against. A review that mixes cited defects with preferences costs more to read
 than it saves, because someone has to re-derive which is which.
 
@@ -42,21 +42,25 @@ as approval.
 ## The criteria
 
 Read [CRITERIA.md](../review-criteria/references/CRITERIA.md) and apply it end
-to end: the producible-source rule, findings versus observations, judging by
-intent rather than by a step list, the smell baseline, repository conventions,
-how tests are judged.
+to end: the producible-source rule, the `BLOCKER`/`ADVISORY` classes and what
+separates both from an observation, judging by intent rather than by a step list,
+the smell baseline, the norms ladder, how tests are judged.
 
 This skill does not restate it. One home, three readers.
 
 ## What is different here
 
-Inside a run the scope comes from a plan. Here it does not, so two things change:
+Inside a run the scope comes from a plan. Here it does not, so three things
+change:
 
 - **there is no phase to judge against.** The question becomes: does the code do
   what its own surroundings say it should — the repository's conventions, the
   patterns already there, the tests, the PR description or issue if there is one.
   Ask for that intent if none is available; without it you can judge the code but
   not whether it is the right code, and the report must say so;
+- **there is no `Norms:` line**, so the ladder has no first rung and its fallback
+  applies: documented conventions are hard, and everything else needs an existing
+  pattern in the code to point at;
 - **there is no fix loop.** You report, and stop.
 
 Where an originating issue or spec *is* available, judge against it too, and keep
@@ -66,9 +70,9 @@ lets one hide the other.
 
 ## Report
 
-- **Findings**, most serious first, each with its cited source and a file and
-  line.
-- **Observations** — true, out of scope, non-blocking.
+- **Findings**, most serious first, each with its class — `BLOCKER` or
+  `ADVISORY` — its cited source, and a file and line.
+- **Observations** — true, out of scope, not findings at all.
 - **What could not be judged** from the scope given, and why.
 
 You judge. You do not fix, you do not edit, you do not commit. If the human wants
