@@ -116,6 +116,28 @@ that the pipeline reads as it works. Each one documents its own use inside its
 | [`dev-skills:tests`](skills/tests/SKILL.md) | cover untested code, or repair tests that lie |
 | [`dev-skills:writing-great-skills`](skills/writing-great-skills/SKILL.md) | design, audit, or edit a skill so it behaves predictably |
 
+## Checking this repository
+
+Two commands, answering different questions. Neither needs anything installed:
+bash and the Python standard library.
+
+`scripts/check` asks whether the tree is sound — every cross-reference resolves,
+no skill name has drifted, the plugin manifest and every `SKILL.md` frontmatter
+parse. That last one matters more than it sounds: frontmatter Claude Code cannot
+parse drops every field silently at load, and nothing else catches it.
+
+`scripts/test` runs the behavioural suite over the scripts a run leans on —
+brief extraction, the run marker's lifecycle, the mechanical path check, the
+squash and its recovery refs.
+
+Those tests cover code that already worked, so a new one passes the moment it is
+written and proves nothing by passing. Each therefore carries a recorded
+mutation instead. `scripts/test --mutations` breaks the production file in the
+exact way the test claims to catch, watches that named test fail, puts the file
+back, and checks the tree is clean again. A patch that no longer applies is
+reported `stale` rather than skipped — that is the signal that a rewrite changed
+the thing a test was pinning, and it is meant to be loud.
+
 ## Licence
 
 MIT — see [LICENSE](LICENSE).
