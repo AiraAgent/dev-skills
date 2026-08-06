@@ -30,10 +30,15 @@ before it goes anywhere.
 4. **[`dev-skills:finish`](skills/finish/SKILL.md)** — the run collapses into a
    single commit, you read exactly that commit, and it integrates.
 
-Nothing on that list starts by itself. All four are marked
-`disable-model-invocation`, so Claude cannot reach for them: a run begins
-because you typed it, never because something decided your task looked big
-enough to warrant one.
+The ceremony sits where it costs money and rewrites history. The last two —
+`dev-skills:implement` and `dev-skills:finish` — are marked
+`disable-model-invocation` and are simply absent from Claude's tool list, so it
+can name them but never call them. A run's *execution* begins because you typed
+it, never because something decided your task looked big enough to warrant one.
+
+The first two Claude can reach for, and should: asking to talk a fuzzy task
+through, or to turn an agreed understanding into a plan, is not a decision worth
+a gate. Nothing is spent and nothing is rewritten until you type the third.
 
 ### Other ways in
 
@@ -115,6 +120,12 @@ that the pipeline reads as it works. Each one documents its own use inside its
 | [`dev-skills:tdd`](skills/tdd/SKILL.md) | the red-green-refactor discipline the implementer builds by |
 | [`dev-skills:tests`](skills/tests/SKILL.md) | cover untested code, or repair tests that lie |
 | [`dev-skills:writing-great-skills`](skills/writing-great-skills/SKILL.md) | design, audit, or edit a skill so it behaves predictably |
+
+One file is not a skill and is worth knowing about:
+[`references/VOCABULARY.md`](references/VOCABULARY.md) defines every term the
+pipeline uses — phase, brief, dispatch, frozen contract, write-set, fact,
+decision — plus the literal strings the plan-parsing scripts anchor on. When two
+documents here use the same word, that is where they agree on what it means.
 
 ## Checking this repository
 

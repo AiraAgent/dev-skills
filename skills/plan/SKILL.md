@@ -1,7 +1,6 @@
 ---
 name: plan
-description: Write the implementation plan — the contract a cold, cheap implementer builds from. Invoke before any execution, or as the entry point when a spec already exists and the human names an entry from its list.
-disable-model-invocation: true
+description: Write the implementation plan — the contract a cold, cheap implementer builds from. Use when the human moves from working out what to build to writing it down ("write the plan", "переходим к плану"), when a grilling has ended in alignment, or when they name an entry from an existing spec's plan list.
 ---
 
 # Writing a plan
@@ -91,6 +90,44 @@ The same reason puts the stories and the cases here. A spec exists only when a
 task needs more than one plan; a story that lived only in a spec would have
 nowhere to live in the single-plan case, which is most cases.
 
+## The skeleton
+
+The heading order, literally. Reproduce it and the container is right:
+
+```markdown
+# <plan title>
+
+Norms: …
+Baseline: …
+
+## Goal
+## Spec
+## User stories
+## Constraints
+## Out of scope
+## What the final gate proves
+## Test seams
+## Paths and existing abstractions
+## Test cases
+## Topology
+## Phases
+### Phase 1. <what becomes true>
+### Phase 2. <what becomes true>
+## Final-gate scenarios
+## Ledger
+```
+
+`## Phases` is a container, not a decoration. Without it the headings below it
+are not something a script can cut: `brief` hard-stops, and `plan-check` — run
+before you present the plan, see below — repairs the omission rather than let a
+run start on it. Writing the container yourself is how it never comes up.
+
+The strings the scripts anchor on — these headings, the seven field names, the
+Topology columns, the artifact names derived from a phase range — are written out
+once, in [`references/VOCABULARY.md`](../../references/VOCABULARY.md), together
+with the vocabulary every artifact in a run uses. The skeleton is the shape; that
+file is the letter. Neither is a copy of the other.
+
 ## Two lines in the header
 
 Both are bare lines above `## Goal`, so every brief and every gate carries them:
@@ -145,13 +182,35 @@ check your work. Everything they need is in the phase or in the plan's header.
 brief; anything absent from them the implementer either invents or goes looking
 for — which is exactly what the plan exists to prevent.
 
-### Decisions are fixed; mechanics are not
+### Three levels of fixing a decision
 
-**Fixed exhaustively:** every path touched, including test paths; the
-abstractions used, by name and with their path; which names and signatures are
-public and must not change; which test cases the phase makes true; edge cases and
-the behaviour on them; what counts as an error and how it shows; what not to
-touch and what not to introduce; order, where order carries meaning.
+A decision is not fixed by being mentioned. There are three levels, and which one
+a thing sits on is not a matter of taste.
+
+**Written out verbatim, in a fenced block:** the type, interface or signature of
+anything that crosses a phase boundary or a module boundary. Not described and
+not promised — written, in the language of the codebase, so the implementer can
+lift it:
+
+```ts
+export type CreateUserInput = { email: string; password: string }
+export function createUser(input: CreateUserInput): Promise<Result<User, CreateUserError>>
+```
+
+Writing the signature out is where the design errors surface — the argument that
+has nowhere to come from, the error case with no channel, the two callers that
+need different shapes. A planner who writes "the signature does not change"
+instead has not taken that decision; they have handed it to the implementer, the
+one actor in the run with no authority to take it. Which field it lands in
+follows from who reads it: *Frozen for later phases* when a later phase builds on
+it, *How* when it is this phase's own surface and nothing downstream depends on
+the shape.
+
+**Fixed in prose:** every other decision — every path touched, including test
+paths; the abstractions used, by name and with their path; which test cases the
+phase makes true; edge cases and the behaviour on them; what counts as an error
+and how it shows; what not to touch and what not to introduce; order, where order
+carries meaning.
 
 **Never appears:** function bodies, test code, imports, style. That is typing,
 not deciding. The planner saves nothing by omitting it, because the planner
@@ -177,15 +236,15 @@ anchors.
 | **Changes** | paths *and* entities: a symbol, a function, a region — not only a file |
 | **How** | named abstractions with paths, plus the negative side: what not to introduce |
 | **Do not touch** | only conflicts *inside* paths already granted |
-| **Frozen for later phases** | names, signatures and data shapes that later phases build on |
+| **Frozen for later phases** | the names, signatures and data shapes later phases build on — written out, never referred to |
 | **Verification** | the approved test cases this phase makes true, by ID |
 | **Steps** | the order of work, with checkboxes |
 
 **All seven are mandatory; absence is written as a dash.** `Do not touch: —` means
 "there is no neighbouring conflict", not "I forgot to think about it". There is no
 other way to tell forgetfulness from a considered nothing, and in *Frozen for
-later phases* that slip costs the next segment a stop. The presence of all seven
-subheadings is checked by grep, with no model judgement involved.
+later phases* that slip costs the next phase range a stop. The presence of all
+seven subheadings is checked by grep, with no model judgement involved.
 
 In a typical phase three of the seven are dashes. That is cheaper than one
 invisible omission.
@@ -290,9 +349,11 @@ direction costs one visible, cheap stop instead of a silent divergence.
 
 ## Topology
 
-Number phases straight through. A unit of dispatch is described as "phases 1–3".
-**Do not introduce a term for a group of phases** — in conversation about
-mechanics, "segment"; in the artifact, no new entity appears.
+Number phases straight through. A unit of dispatch is described as "phases 1–3",
+in the artifact and in conversation alike. **Do not introduce a term for a group
+of phases** — the range is the name, and every artifact derived from one is named
+after it. A separate noun for something the reader can already see is one more
+mapping to hold, and the mapping is what goes stale when the boundaries move.
 
 **Verification is not needed after every phase.** Three phases — "add the icon
 file", "put the icon in the header", "clicking switches the theme" — where the
@@ -332,6 +393,21 @@ Sequential.
 3. **A later phase joins them.** Name it. Without a join, nothing ever proves the
    two sides meet.
 
+Condition 1 read backwards is the decision procedure, and it decides every case:
+
+```text
+the later phase needs the earlier one's CODE   → Sequential
+the later phase needs only its SHAPE           → write the shape down,
+                                                  and it is Parallel
+```
+
+Almost every chain that looks sequential is really the second line. "I do not
+know the implementation yet" is not a dependency — it is a missing sentence in
+*Frozen for later phases*, and writing that sentence is the whole difference
+between two phases that queue and two that run at once. Ask it of every
+Sequential pair before you settle: does this phase need what the earlier one
+*wrote*, or only the shape it exposes?
+
 The canonical shape:
 
 ```text
@@ -346,25 +422,46 @@ phases to edit one file at once — "parallel by purpose, not by file" — and t
 permission is exactly where the collisions came from. Where paths intersect, the
 phases run Sequential.
 
-Assign the **model per group** — Haiku or Sonnet by difficulty. The orchestrator
-executes the assignment and does not change it silently.
+Assign the **model per row**. **Sonnet by default; Opus only where the phase is
+genuinely hard** — the densest document in the tree, a design the plan could not
+fully fix, a phase whose failure mode is quiet. There is nothing below Sonnet:
+one fix round costs an implementer pass and a gate pass, which
+`dev-skills:implement` calls the largest single cost in the run, and no cheaper
+model saves that much. The orchestrator executes the assignment and does not
+change it silently.
+
+The `Implementer` column is filled on every row, even when every row says the
+same thing. A column that appears only sometimes makes the reader work out the
+table's shape before reading it; a column always there is one cell to change.
 
 ```markdown
-| Segment | Phases | Implementer | Why the boundary is here |
-|---|---|---|---|
-| 1 | 1 | Sonnet | everything downstream builds on this contract |
-| 2 | 2, 3 | Haiku | the two sides of that contract, parallel, joined by 4 |
-| 3 | 4 | Sonnet | the join, and the last work before the gates |
+| Phases | Implementer | Why the boundary is here |
+|---|---|---|
+| 1 | Sonnet | everything downstream builds on this contract |
+| 2, 3 | Sonnet | the two sides of that contract, parallel, joined by 4 |
+| 4 | Sonnet | the join, and the last work before the gates |
 ```
 
 The column headings are fixed: the orchestrator reads this table mechanically.
 
 ## Dependencies are expressed in the producing phase
 
-If phase 3 relies on an interface from phase 1, that is written **in phase 1**:
-"interface `X` is public, the signature does not change, later work relies on it."
+If phase 3 relies on an interface from phase 1, that is written **in phase 1** —
+and *written* is literal. The field carries the thing itself:
 
-That is the *Frozen for later phases* field. The union of those fields is the
+````markdown
+**Frozen for later phases**
+- `type Config = { retries: number; timeout: number }`
+- `loadConfig(path: string): Config` — throws `ConfigError` on a malformed file
+````
+
+**The frozen thing is written, not referenced.** "The shape agreed in phase 1",
+"the interface from the module above", "the signature does not change" — none of
+those freeze anything, because none of them let a later phase write the call. The
+test is blunt: could an implementer who has read this field and no code produce a
+correct call? If not, the field is a note to yourself.
+
+That is the *Frozen for later phases* field, and the union of those fields is the
 **frozen contract** — what a parallel group's two sides build against without
 seeing each other's code, and the one thing a review may not change with an
 ordinary finding.
@@ -401,18 +498,30 @@ through, so they never have to work out what to check.
 
 ## Ledger
 
-The run's record and the resume point after a compaction:
+The run's record and the resume point after a compaction. **One line per row of
+the Topology table**, named by its phases, with the tests before them and the two
+gates after — so the table above and this list are the same split written twice,
+and a boundary that moves in one has an obvious place to move in the other:
 
 ```markdown
 - [ ] Plan approved
 - [ ] Test cases approved
-- [ ] Checkpoint 1
-- [ ] Checkpoint 2
-- [ ] Final gate
+- [ ] Tests written
+- [ ] Phase 1
+- [ ] Phases 2–3
+- [ ] Phase 4
+- [ ] Gate A — `HEAD` at the first gate dispatch:
+- [ ] Gate B
 - [ ] Squash prepared
 - [ ] Accepted by the human
 - [ ] Integrated
 ```
+
+The blank on the `Gate A` line is a slot, not a stray colon. The fix-round cap is
+counted from that commit — `git log --format=%s <it>..HEAD | grep -c '^fix('` —
+and a cap counted from a `HEAD` nobody wrote down is enforced by recollection,
+which is how a cap of two once ran to four. The orchestrator fills it in when it
+dispatches the first gate; leave it empty.
 
 **One human acceptance, and it sits after the squash.** The human approves
 exactly the object that lands on the base, not a range that is afterwards
@@ -451,14 +560,38 @@ can run it there and watch it fail.
 
 ## Before you present it
 
-Read the plan against the spec, or against the conversation if there is no spec:
+Run the shape check first. It is mechanical, and it costs one command:
+
+```bash
+skills/implement/scripts/plan-check <plan file>
+```
+
+- **`0`** — the file is well-formed, or `plan-check` repaired it and left nothing
+  for anyone to decide. A repair is announced on a `fixed:` line and is never a
+  finding; read the line, because the file on disk is now different from the one
+  you wrote.
+- **`1`** — findings, one per malformed or missing thing, each naming the phase
+  it belongs to. Every one of them is yours to fix **in the plan**, here: the
+  content of a missing field is a decision, and no actor inside a run may invent
+  one, so the same finding met at execution stops the run and goes to the human.
+- **`2`** — usage, or the file is not there.
+
+Do not open the script to work out what it wants; the message says. The same
+check runs again at preflight when `dev-skills:implement` starts, so nothing left
+here is missed — it is found later instead, when the plan is no longer in front
+of you and the fix costs a stopped run.
+
+Then read the plan against the spec, or against the conversation if there is no
+spec:
 
 1. **Coverage.** Every story points at a phase, and every phase serves a story.
    List anything on either side that does not.
 2. **Placeholders.** No "TBD", no "handle edge cases", no "similar to phase N".
 3. **Name consistency.** A symbol frozen in phase 1 is spelled the same way in
    phase 4.
-4. **Seven fields.** Every phase has all seven subheadings, dashes included.
+4. **Dashes.** `plan-check` proves the seven subheadings are present; only you
+   can tell a dash that means "there is no neighbouring conflict" from one that
+   means the field was never thought about.
 5. **The header lines.** `Norms:` names every document a reviewer is allowed to
    hold the work to. `Baseline:` was measured, not guessed.
 
@@ -476,6 +609,8 @@ Present the plan and take approval before anything is built. Show:
   contract, the two disjoint path sets and the join phase;
 - the test seams, as their own question;
 - the `Norms:` and `Baseline:` lines;
+- that `plan-check` exits `0` on this file, and anything it repaired to get
+  there;
 - anything you settled by your own judgement rather than from the spec.
 
 Then ask:

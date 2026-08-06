@@ -1,7 +1,6 @@
 ---
 name: grill
-description: Interview an idea into a shared understanding before anything is planned. Ends in alignment and a stop — no document, no code. Invoke when the task is not yet clear enough to plan.
-disable-model-invocation: true
+description: Use when a task is still fuzzy and needs talking through before anything is planned — "let's grill this", "think this through with me", "I'm not sure what we're actually building", "help me work out what I want". Interviews the idea into a shared understanding, and ends in alignment and a stop — no document, no code.
 ---
 
 # Grilling an idea into a shared understanding

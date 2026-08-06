@@ -9,6 +9,12 @@ disable-model-invocation: true
 You are the orchestrator. You dispatch, you classify, you record — you do not
 write code and you do not review it.
 
+Every term below — phase, brief, dispatch, report, frozen contract, write-set,
+fact, decision — is defined once in
+[`references/VOCABULARY.md`](../../references/VOCABULARY.md), along with the
+literal strings the scripts anchor on. Read it if a word here is doing more work
+than you expected.
+
 **Announce at start:** "Using dev-skills:implement to execute the plan."
 
 **The human is *on* the loop here, not in it.** Planning ran every decision past
@@ -68,6 +74,18 @@ scripts/preflight <plan file>
 It covers the mechanical half: half-finished git operations, the branch, base
 drift, the `.gitignore` line and whether it is tracked, the `.ai-workflow`
 symlink, and whether the environment contract carries `bootstrap` and `link`.
+
+It also runs `plan-check` over the plan itself, and what comes back splits in
+two. **A missing `## Phases` is repaired in place** — the heading can go in only
+one position, so preflight inserts it, reports it under `fixed:`, and the run
+carries on. **Every other plan-check finding stops the run and goes to the
+human.**
+
+That second half reads like an over-reaction until you see what the findings
+are: a phase missing a field, a gap in the numbering, a Topology table whose
+columns are wrong. What belongs *in* a missing field is a decision, and the
+fact/decision rule below forbids any actor in the run from inventing one. This
+is that rule applied to the plan itself, not a new one.
 
 The other half is yours and needs the plan:
 
@@ -135,7 +153,7 @@ earlier reports — **never the earlier diffs**.
 
 ```text
 record BASE (git rev-parse HEAD)
-→ scripts/segment-brief <plan> <range>       the implementer's brief
+→ scripts/brief <plan> <range>               the implementer's brief
 → dispatch the implementer on the model the plan assigns
 → it builds, runs its checks last, commits, writes its report
 → next phase
@@ -245,7 +263,7 @@ goes looking for one it was not given.
 and the dispatch inherits this session's model, which is the most expensive one
 available.
 
-`scripts/segment-dispatch <plan> <range>` derives everything above that is
+`scripts/dispatch <plan> <range>` derives everything above that is
 mechanical and writes it to a file — it never prints the dispatch body, only the
 path and how many holes remain. `--gate-a` builds the code gate's dispatch
 instead. What it cannot derive comes back as a visible `<<< FILL: ... >>>`
@@ -278,7 +296,7 @@ After the last phase, in this order and never at once:
 
 ```text
 scripts/review-package <plan> BASE HEAD   the whole range
-→ scripts/segment-dispatch <plan> --gate-a
+→ scripts/dispatch <plan> --gate-a
 → dispatch gate A: checks, then conformance, then integrity
 → green → dispatch gate B on the executable cases
 → green → squash, then the human
@@ -340,7 +358,7 @@ dismissed: that is a `PLAN_CONFLICT`, and it goes to the human.
 
 **The one hard rule: stage only the paths you changed yourself.** `git add -A`,
 `git add .` and `git commit -a` are forbidden, and `commit-guard` enforces it —
-safety must not depend on whether Haiku remembers.
+safety must not depend on whether the implementer remembers.
 
 What blanket staging breaks is not the final result — everything collapses into
 one commit at the end anyway — but two things that exist only during the run: the
@@ -381,7 +399,8 @@ decision → stop the WHOLE run
 ```
 
 The classification is not delegated — it needs an understanding of consequences,
-and the implementer may be Haiku. The one thing an actor decides for itself is
+and the implementer is the weakest seat in the run. The one thing an actor
+decides for itself is
 **whether a field of its own phase is touched**: that is not weighing
 consequences, it is checking against a list in front of it. Unsure? Treat it as
 touched.

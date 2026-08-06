@@ -1,7 +1,6 @@
 ---
 name: improve
-description: Scan a codebase for deepening opportunities, present them as a visual HTML report, then brainstorm through whichever one you pick.
-disable-model-invocation: true
+description: Use when the ask is open-ended improvement rather than a named change — "what could be better here", "find opportunities to improve this", "where is this codebase weak". Scans for deepening opportunities, presents them as a visual HTML report, then brainstorms through whichever one you pick.
 ---
 
 <STOP-GATE>

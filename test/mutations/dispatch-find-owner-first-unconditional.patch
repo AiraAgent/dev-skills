@@ -1,8 +1,8 @@
-diff --git a/skills/implement/scripts/segment-dispatch b/skills/implement/scripts/segment-dispatch
-index 2523289..cfa5841 100755
---- a/skills/implement/scripts/segment-dispatch
-+++ b/skills/implement/scripts/segment-dispatch
-@@ -196,13 +196,7 @@ def topology_segments(lines):
+diff --git a/skills/implement/scripts/dispatch b/skills/implement/scripts/dispatch
+index 602e03d..f750456 100755
+--- a/skills/implement/scripts/dispatch
++++ b/skills/implement/scripts/dispatch
+@@ -202,13 +202,7 @@ def topology_segments(lines):
  def find_owner(segments, first, last):
      """(owner, None) on an exact match; (None, spanning) when the requested
      range overlaps more than one segment; (None, []) when nothing covers it."""

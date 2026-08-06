@@ -1,12 +1,12 @@
 ---
 name: tdd
-description: "Use when writing tests — the red-green-refactor cycle and the discipline around it: one test at a time, verify red before green, the simplest code that passes. Read by the implementer when a segment has tests."
+description: "Use when writing tests — the red-green-refactor cycle and the discipline around it: one test at a time, verify red before green, the simplest code that passes. Read by the implementer when its phases have tests."
 user-invocable: false
 ---
 
 # Test discipline
 
-Handed to the implementer when the plan says the segment has tests. **Whether
+Handed to the implementer when the plan says its phases have tests. **Whether
 there are tests is the plan's decision, not yours** — the plan names the seam,
 the file, and the cases. This file is how you write them once it has.
 

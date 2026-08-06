@@ -9,6 +9,8 @@ write-sets answer both ways:
 The fenced block inside phase 1's *How* names a path that must never be read as
 a write: a path inside a fence is an example, not a declaration.
 
+## Phases
+
 ### Phase 1. The module both sides build against
 
 **Becomes true**

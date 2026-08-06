@@ -12,18 +12,18 @@
 #
 # The "## Phases" line is checked before anything is cut. Without it the awk
 # below never leaves header mode: it emits the whole plan, swallowing every phase
-# heading outside the range while still printing their bodies. Both of the checks
-# at the bottom pass on that output, so the failure is silent and the implementer
+# heading outside the range while still printing their bodies. The check at the
+# bottom passes on that output, so the failure is silent and the implementer
 # receives its own phase followed by unlabelled requirement blocks it cannot
 # attribute. That is worth a hard stop, not a warning.
 #
-# Usage: segment-brief PLAN_FILE RANGE [OUTFILE]
+# Usage: brief PLAN_FILE RANGE [OUTFILE]
 #   RANGE   a single phase (3) or an inclusive span (2-4)
-# Default OUTFILE: <workspace>/segment-<range>-brief.md
+# Default OUTFILE: <workspace>/brief-<range>.md
 set -euo pipefail
 
 if [ $# -lt 2 ] || [ $# -gt 3 ]; then
-  echo "usage: segment-brief PLAN_FILE RANGE [OUTFILE]" >&2
+  echo "usage: brief PLAN_FILE RANGE [OUTFILE]" >&2
   exit 2
 fi
 
@@ -48,7 +48,7 @@ if [ $# -eq 3 ]; then
   out=$3
 else
   dir=$("$(cd "$(dirname "$0")" && pwd)/workspace" "$plan")
-  out="$dir/segment-${first}-${last}-brief.md"
+  out="$dir/brief-${first}-${last}.md"
 fi
 
 # Once "## Phases" ends — at the next real "##" heading — the cut latches
@@ -92,15 +92,6 @@ fi
 want=$((last - first + 1))
 if [ "$found" -ne "$want" ]; then
   echo "warning: range ${first}-${last} wanted ${want} phases, the brief carries ${found}" >&2
-fi
-
-missing=""
-for field in "Becomes true" "Changes" "How" "Do not touch" \
-             "Frozen for later phases" "Verification" "Steps"; do
-  grep -qF "**${field}**" "$out" || missing="${missing}${missing:+, }${field}"
-done
-if [ -n "$missing" ]; then
-  echo "warning: no phase in this brief carries: ${missing}" >&2
 fi
 
 echo "wrote ${out}: $(wc -l < "$out" | tr -d ' ') lines"

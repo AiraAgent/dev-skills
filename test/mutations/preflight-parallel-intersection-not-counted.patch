@@ -1,10 +1,10 @@
 diff --git a/skills/implement/scripts/preflight b/skills/implement/scripts/preflight
-index 1747db1..cfc34a7 100755
+index 70de353..52a761f 100755
 --- a/skills/implement/scripts/preflight
 +++ b/skills/implement/scripts/preflight
-@@ -84,7 +84,7 @@ cmd_parallel() {
-       [ "$i" -lt "$j" ] || continue
-       overlap="$(comm -12 "$tmp/$i" "$tmp/$j")"
+@@ -87,7 +87,7 @@ cmd_parallel() {
+       # reports an intersecting pair as disjoint — this check failing open.
+       overlap="$(LC_ALL=C comm -12 "$tmp/$i" "$tmp/$j")"
        [ -n "$overlap" ] || continue
 -      clashes=$((clashes + 1))
 +      clashes=$((clashes + 0))

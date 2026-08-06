@@ -1,8 +1,8 @@
-diff --git a/skills/implement/scripts/segment-dispatch b/skills/implement/scripts/segment-dispatch
-index 2523289..fb3918e 100755
---- a/skills/implement/scripts/segment-dispatch
-+++ b/skills/implement/scripts/segment-dispatch
-@@ -112,7 +112,7 @@ def split_row(line):
+diff --git a/skills/implement/scripts/dispatch b/skills/implement/scripts/dispatch
+index 602e03d..cbd984b 100755
+--- a/skills/implement/scripts/dispatch
++++ b/skills/implement/scripts/dispatch
+@@ -115,7 +115,7 @@ def split_row(line):
  
  
  def is_separator(cells):

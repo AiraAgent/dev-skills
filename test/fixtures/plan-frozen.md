@@ -3,6 +3,8 @@
 Four phases, numbered straight through. Reused by later phases as generic
 plan input — its phase numbering and field spelling do not change.
 
+## Phases
+
 ### Phase 1. First phase title
 
 **Becomes true**

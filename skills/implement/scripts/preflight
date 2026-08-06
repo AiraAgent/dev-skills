@@ -82,7 +82,10 @@ cmd_parallel() {
   for i in "${!ranges[@]}"; do
     for j in "${!ranges[@]}"; do
       [ "$i" -lt "$j" ] || continue
-      overlap="$(comm -12 "$tmp/$i" "$tmp/$j")"
+      # LC_ALL=C, because changes_paths sorted LC_ALL=C. Left in the ambient
+      # locale comm disagrees about case, walks past the shared path, and
+      # reports an intersecting pair as disjoint — this check failing open.
+      overlap="$(LC_ALL=C comm -12 "$tmp/$i" "$tmp/$j")"
       [ -n "$overlap" ] || continue
       clashes=$((clashes + 1))
       echo "intersect: phases ${ranges[$i]} and phases ${ranges[$j]} both write:"
@@ -186,9 +189,22 @@ else
   grep -qiE '^\*\*link'      "$contract" || add "no 'link' field in $(basename "$contract") — ask which untracked paths to symlink (default .env*), then record it"
 fi
 
-# --- the plan has to exist ------------------------------------------------
+# --- the plan has to exist, and has to have the right shape ----------------
 if [ $# -ge 1 ]; then
-  [ -f "$1" ] || add "no such plan file: $1"
+  if [ -f "$1" ]; then
+    pc_out=$("$(dirname "$0")/plan-check" "$1" 2>&1)
+    if [ -n "$pc_out" ]; then
+      while IFS= read -r pc_line; do
+        case "$pc_line" in
+          fixed:*) echo "$pc_line" ;;
+          "")      ;;
+          *)       add "$pc_line" ;;
+        esac
+      done <<< "$pc_out"
+    fi
+  else
+    add "no such plan file: $1"
+  fi
 fi
 
 echo "tree: ${root}"

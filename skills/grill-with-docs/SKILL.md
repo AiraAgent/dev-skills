@@ -1,7 +1,6 @@
 ---
 name: grill-with-docs
-description: Grilling that also captures what outlives the conversation — glossary terms as they settle, and an ADR when one is genuinely earned. Invoke instead of dev-skills:grill when the work introduces domain vocabulary or a hard-to-reverse decision.
-disable-model-invocation: true
+description: Use instead of dev-skills:grill when the talking-through will settle vocabulary or a hard-to-reverse decision — "we need to agree what we call this", "let's write this decision down", "grill it and capture the terms". Grills the idea and also captures what outlives the conversation: glossary terms as they settle, and an ADR when one is genuinely earned.
 ---
 
 # Grilling, with the domain captured

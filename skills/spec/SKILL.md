@@ -1,7 +1,6 @@
 ---
 name: spec
-description: Write the spec that holds a body of work too large for one plan — shared decisions, vocabulary, and the list of plans it breaks into. Invoke when a single plan cannot cover the work.
-disable-model-invocation: true
+description: Use when the work is too big for one plan and needs splitting first — "this is a whole epic", "write the spec", "break this into plans", "one plan won't cover it". Writes the spec that holds the shared decisions, the vocabulary, and the list of plans the work breaks into.
 ---
 
 # Writing a spec

@@ -5,7 +5,7 @@ A dispatch is ~1200 words, most of it mechanical: where the segment sits, the
 brief path, what earlier segments built, the report path, the model. Typed by
 hand it lands in the orchestrator's context and is re-read every turn for the
 rest of the run. This script derives the mechanical part and writes it to a
-file; the orchestrator hands a subagent the *path*, the way segment-brief
+file; the orchestrator hands a subagent the *path*, the way brief
 already hands over a brief.
 
 Printing the dispatch body to stdout would defeat the purpose — the
@@ -26,9 +26,9 @@ contains, so the agent that reads it (which has to read it anyway) can refuse
 to proceed on an incomplete dispatch without relying on the orchestrator to
 remember to check.
 
-Usage: segment-dispatch PLAN_FILE RANGE [--force]
-       segment-dispatch PLAN_FILE --gate-a [--force]
-  RANGE   a single phase (3) or an inclusive span (2-4), as segment-brief takes
+Usage: dispatch PLAN_FILE RANGE [--force]
+       dispatch PLAN_FILE --gate-a [--force]
+  RANGE   a single phase (3) or an inclusive span (2-4), as brief takes
 
 --gate-a builds the code gate's dispatch instead, and takes no RANGE: the gate
 holds the whole BASE..HEAD, not one row of the Topology table.
@@ -39,7 +39,7 @@ import re
 import subprocess
 import sys
 
-PROG = "segment-dispatch"
+PROG = "dispatch"
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILLS_DIR = os.path.dirname(os.path.dirname(HERE))  # .../skills
 PLUGIN_ROOT = os.path.dirname(SKILLS_DIR)  # .../dev-skills
@@ -97,8 +97,7 @@ FENCE_RE = re.compile(r"^```")
 
 
 class Segment:
-    def __init__(self, n, phases_raw, first, last, model, why):
-        self.n = n
+    def __init__(self, phases_raw, first, last, model, why):
         self.phases_raw = phases_raw
         self.first = first
         self.last = last
@@ -133,24 +132,27 @@ def parse_table(table_lines):
                 return i
         return None
 
-    seg_i, phase_i, model_i, why_i = (
-        col("segment"), col("phase"), col("implementer"), col("why"))
-    if None in (seg_i, phase_i, model_i, why_i):
+    phase_i, model_i, why_i = (
+        col("phase"), col("implementer"), col("why"))
+    if None in (phase_i, model_i, why_i):
         die("the Topology table is missing an expected column "
-            "(Segment, Phases, Implementer, Why the boundary is here); "
+            "(Phases, Implementer, Why the boundary is here); "
+            "header found: %s" % header, 3)
+    if len(header) != 3:
+        die("the Topology table carries an unexpected column "
+            "(want exactly Phases, Implementer, Why the boundary is here); "
             "header found: %s" % header, 3)
 
     segments = []
     for r in body:
-        width = max(seg_i, phase_i, model_i, why_i)
+        width = max(phase_i, model_i, why_i)
         if len(r) <= width:
             continue
-        seg_nums = re.findall(r"\d+", r[seg_i])
         phase_nums = [int(x) for x in re.findall(r"\d+", r[phase_i])]
-        if not seg_nums or not phase_nums:
+        if not phase_nums:
             continue
         segments.append(Segment(
-            int(seg_nums[0]), r[phase_i].strip(),
+            r[phase_i].strip(),
             min(phase_nums), max(phase_nums),
             r[model_i].strip(), r[why_i].strip()))
     return segments
@@ -217,18 +219,18 @@ def hole(question):
 
 
 CORRECTED_HOLE = hole(
-    "Which fields of this segment's brief were corrected, by name? (The "
+    "Which fields of this phase range's brief were corrected, by name? (The "
     "content already lives in the brief, marked [CORRECTED] — name the "
     "fields here, do not restate what they say.) Say \"none\" if nothing in "
     "this brief was corrected.")
 
 WARNING_HOLE = hole(
-    "Is there anything specific to this segment worth calling out before "
+    "Is there anything specific to this phase range worth calling out before "
     "work starts — a sharp edge, a step more fragile than it reads, a place "
-    "an earlier segment nearly went wrong? Say \"none\" if there is nothing.")
+    "an earlier phase range nearly went wrong? Say \"none\" if there is nothing.")
 
 TDD_HOLE = hole(
-    "Does this segment write tests? Check the Verification field of each "
+    "Does this phase range write tests? Check the Verification field of each "
     "phase in the brief above. If yes, name dev-skills:tdd here as the "
     "implementer's test discipline; if no, say so explicitly rather than "
     "leaving the question unanswered.")
@@ -265,10 +267,10 @@ def find_criteria():
 
 
 def extract_written_path(brief_stdout):
-    """segment-brief prints 'wrote <path>: N lines' on success."""
+    """brief prints 'wrote <path>: N lines' on success."""
     m = re.search(r"^wrote (.+): \d+ lines$", brief_stdout.strip(), re.MULTILINE)
     if not m:
-        die("segment-brief produced unexpected output:\n%s"
+        die("brief produced unexpected output:\n%s"
             % indent(brief_stdout.strip() or "(empty)"))
     return m.group(1)
 
@@ -282,21 +284,22 @@ def contracts_dir(workspace):
 
 
 def existing_reports(workspace):
-    """The reports already written in this run, in numeric order. A later phase
-    reads these and the plan — never an earlier phase's diff."""
+    """The reports already written in this run, in numeric order by their
+    first phase. A later phase reads these and the plan — never an earlier
+    phase's diff."""
     if not os.path.isdir(workspace):
         return []
     found = []
     for name in os.listdir(workspace):
-        m = re.fullmatch(r"segment-(\d+)-report\.md", name)
+        m = re.fullmatch(r"report-(\d+)-(\d+)\.md", name)
         if m:
             found.append((int(m.group(1)), os.path.join(workspace, name)))
     return [p for _n, p in sorted(found)]
 
 
 def build_implementer_body(plan, first, last, rng, owner, workspace, agent_file):
-    brief_path = extract_written_path(run_sibling("segment-brief", plan, rng))
-    report_path = os.path.join(workspace, "segment-%d-report.md" % owner.n)
+    brief_path = extract_written_path(run_sibling("brief", plan, rng))
+    report_path = os.path.join(workspace, "report-%s.md" % rng)
 
     if first == 1:
         contract_text = (
@@ -432,8 +435,8 @@ and do not proceed on the rest.
 """
 
 
-USAGE = ("usage: segment-dispatch PLAN_FILE RANGE [--force]\n"
-         "       segment-dispatch PLAN_FILE --gate-a [--force]")
+USAGE = ("usage: dispatch PLAN_FILE RANGE [--force]\n"
+         "       dispatch PLAN_FILE --gate-a [--force]")
 
 
 def main():
@@ -462,7 +465,7 @@ def main():
     else:
         first, last = parse_range(positional[1])
         rng = "%d-%d" % (first, last)
-        out_path = os.path.join(workspace, "segment-%s-dispatch.md" % rng)
+        out_path = os.path.join(workspace, "dispatch-%s.md" % rng)
 
     if os.path.exists(out_path) and not force:
         die("output file already exists: %s\n  the orchestrator may have "
@@ -486,11 +489,11 @@ def main():
         if owner is None:
             if spanning:
                 names = ", ".join(
-                    "row %d (phases %s)" % (s.n, s.phases_raw) for s in spanning)
+                    "phases %s" % s.phases_raw for s in spanning)
                 die("phases %s span more than one Topology row: %s\n  "
                     "dispatch one row at a time" % (rng, names), 3)
             existing = ", ".join(
-                "row %d: phases %s" % (s.n, s.phases_raw) for s in segments)
+                "phases %s" % s.phases_raw for s in segments)
             die("no Topology row covers phases %s exactly.\n  rows in %s: %s"
                 % (rng, plan, existing or "(none)"), 3)
 

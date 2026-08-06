@@ -97,7 +97,7 @@ questions arrive here, in this order:
    count *before* the diff so nothing rides through unnoticed.
 
 This is where the smells that live between phases become visible, and it is worth
-naming them rather than gesturing at "what a checkpoint could not see":
+naming them rather than gesturing at "what no single phase could see":
 
 - **Duplicated Code** — the same logic shape in two places, built by two
   implementers neither of which saw the other;

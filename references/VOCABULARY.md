@@ -1,0 +1,261 @@
+# Vocabulary — the dev-skills pipeline
+
+The domain model for the pipeline itself: the words a plan, a brief, a dispatch,
+a report and the two gates use, so a human and a model reading any of them mean
+the same thing every artifact writer meant. Every script named here anchors on
+the exact strings in the last three sections — get one wrong and a checker that
+should refuse a plan accepts it instead.
+
+This is an External Reference: a plain file, no frontmatter, not a skill. Any
+skill may point at it.
+
+Skill-authoring vocabulary — **Predictability**, **Model-Invoked**, **Context
+Pointer**, and the rest — is a different domain and stays where it is:
+[`skills/writing-great-skills/references/GLOSSARY.md`](../skills/writing-great-skills/references/GLOSSARY.md).
+This file does not import it.
+
+**Bold terms** in any definition are themselves defined in this file; find them
+by their heading.
+
+## The Run
+
+### Run
+
+A single execution of the pipeline, from an approved **plan** through both
+gates to one landing commit. Opened by `scripts/run-state begin` when
+`dev-skills:implement` starts, closed when `dev-skills:finish` squashes it. Its
+artifacts live under `.ai-workflow/run/<plan>/`. One run at a time per tree:
+`run-state begin` refuses while a marker already exists.
+
+_Avoid_: session, execution, pass
+
+### Phase
+
+A numbered unit inside a **plan**, and nothing else — `### Phase <n>.` under
+`## Phases`, carrying the seven fields (*Becomes true*, *Changes*, *How*, *Do
+not touch*, *Frozen for later phases*, *Verification*, *Steps*). The word
+collides with conversational use, and the collision is closed by declaration,
+not by a rename: in any artifact "phase" is the numbered unit. The stages of a
+**run** are named by their skill instead — `grill`, `plan`, `implement`,
+`finish` — and "the planning phase" or "the implementation phase" is
+conversation; it does not appear in a document.
+
+_Avoid_: step, stage, the planning phase, the implementation phase
+
+### Plan
+
+The file `dev-skills:plan` writes to `.ai-workflow/plans/YYYY-MM-DD-<name>.md`
+— the contract a cold, cheap **implementer** builds from, and the ledger the
+human reads at acceptance. Carries a header (`Norms:`, `Baseline:`, the goal,
+the user stories, the constraints, what is out of scope, what the final gate
+proves, the test seams, the paths and existing abstractions, the test cases),
+the **phase**s under `## Phases`, a `## Topology` table, and a `## Ledger`.
+
+_Avoid_: spec, design doc, ticket
+
+## The Documents
+
+### Brief
+
+The slice of the **plan** one **implementer** actually reads: the plan's
+header plus the phases in its assigned range, and nothing else. Cut by the
+`brief` script; hard-stops on a plan with no `## Phases`. Named by the
+**artifact naming convention** below.
+
+_Avoid_: instructions, spec, ticket
+
+### Dispatch
+
+The file that hands one **implementer**, the **test writer**, or a gate its
+task: the **brief** path, what already exists (the **frozen contract** and
+earlier **report**s), the model to run on, and the report path it must write
+to. Derived mechanically by the `dispatch` script, which marks what it cannot
+derive with a `<<< FILL: ... >>>` marker. Named by the **artifact naming
+convention** below, except a gate's dispatch, which is not derived from a
+range.
+
+_Avoid_: brief (not interchangeable with it — a brief is what an implementer
+reads about the work, a dispatch is what it is told to do with that brief),
+task, ticket
+
+### Report
+
+The file an **implementer**, the **test writer**, or a gate writes back: what
+it built or found, its self-check, its divergences, and the checks it ran.
+Named by the **artifact naming convention** below.
+
+_Avoid_: summary, log, output
+
+## The Actors
+
+### Planner
+
+Whoever is running `dev-skills:plan` — human and model together, since the
+human approves every **phase** boundary and every parallel grouping before the
+plan is final. Decides scope, architecture and phase boundaries; the
+**implementer** decides none of that.
+
+_Avoid_: author, planning agent
+
+### Orchestrator
+
+The session running `dev-skills:implement`. Dispatches every **implementer**,
+the **test writer**, and both gates; classifies every **fact** and **decision**
+it meets; records the **Ledger**. Does not write code and does not review it.
+
+_Avoid_: coordinator, controller, manager
+
+### Implementer
+
+The subagent that builds every **phase** in its **brief**, in order, on the
+model the plan's `## Topology` assigns. Commits its own work, unless it is one
+side of a parallel group, in which case it edits only its own paths and does
+not commit.
+
+_Avoid_: builder, coder, dev
+
+### Test Writer
+
+The subagent that turns the plan's human-approved test cases into executable
+tests, before the production code they check exists. Writes tests and nothing
+else — no architecture, no product decision — and commits them as their own
+commit, before the phases that make them green.
+
+_Avoid_: QA, tester
+
+### Gate A
+
+The run's code gate — Opus, on a clean context. Reads the whole `BASE..HEAD`
+range against the **plan**, in order: checks, then conformance, then
+integrity. Judges whether the code is what the plan asked for, built the way
+the project builds things; never whether the running system works.
+
+_Avoid_: code review, static gate
+
+### Gate B
+
+The run's one runtime gate — Opus, on a clean context. Drives the plan's
+executable test cases on a live system and writes one evidence file per case.
+Judges behaviour, never code quality — that question belongs to gate A.
+
+_Avoid_: e2e gate, runtime review, functional gate
+
+## Contract and Scope
+
+### Frozen Contract
+
+The union of every **phase**'s *Frozen for later phases* field — the names,
+signatures and shapes a parallel group's two sides build against without
+reading each other's code, and the one thing an ordinary gate finding may not
+change. A frozen name, signature or shape that has to change is a
+**PLAN_CONFLICT**, never a quiet adapter in the join phase.
+
+_Avoid_: interface, API, contract (bare)
+
+### Write-Set
+
+The paths one **phase** touches — its *Changes* field, one path per bullet. A
+parallel group is admissible only when the write-sets of its sides are
+disjoint; `scripts/preflight --parallel` checks that mechanically, and
+intersecting write-sets stop the group before anything is dispatched.
+
+_Avoid_: touched files, scope (bare), footprint
+
+## Findings
+
+### Blocker
+
+A gate finding that opens a fix round — the only kind that does. Carried
+alongside its cited source and the file and line it lives at; orthogonal to
+which section of a gate's report it appears under.
+
+_Avoid_: critical, must-fix, error
+
+### Advisory
+
+A gate finding that travels to the human alongside the diff, counted on one
+line, and never on its own buys an implementer pass and a gate pass.
+
+_Avoid_: nit, suggestion, minor
+
+### PLAN_CONFLICT
+
+What an actor reports when a **frozen contract**, or a field of its own
+**phase**, would have to change to proceed. Not fixed and not dismissed by
+anyone downstream of the **plan** — it stops the **run** and goes to the
+human, because only the human can amend the plan.
+
+_Avoid_: blocker (a PLAN_CONFLICT is not graded or weighed the way a
+**Blocker** is — it stops the run outright), escalation (bare)
+
+## The Interview
+
+### Fact
+
+Something unambiguously established from the working tree, that changes no
+**decision** — a path, a symbol name, the signature of an existing internal
+API, a fixture's location, an available repository command. An actor meeting
+a divergence classifies it as a fact only when settling it needs no judgement;
+correcting it is then its own to do, written into the plan, and the run
+carries on.
+
+_Avoid_: assumption, detail
+
+### Decision
+
+Everything a **fact** is not — behaviour, acceptance, scope, architecture, a
+public interface, data migration, security, dependency order, phase
+boundaries. Never settled by an actor on the human's behalf; a decision met
+mid-run stops the whole run and goes to the human with options.
+
+_Avoid_: judgement call, choice
+
+## Retired
+
+Both words survive only here, as retired entries, so a reader meeting one in
+an old document knows it is dead rather than assuming it still means
+something.
+
+### Segment
+
+Retired. Named a contiguous range of phases assigned to one **implementer**,
+before a phase range did that job directly in `## Topology` and in every
+artifact name. What replaced it: a **phase** range, named directly — no
+intervening word.
+
+_Avoid_: — retired; do not use it in a new artifact
+
+### Checkpoint
+
+Retired. Named a review dispatched between phases, mid-run. What replaced it:
+nothing — there are no checkpoint reviews. The two gates read the whole
+assembled range once, at the end, and see everything the checkpoints could
+plus the cross-phase duplication they structurally could not.
+
+_Avoid_: — retired; do not use it in a new artifact
+
+## Fixed strings
+
+The literal strings the scripts in `skills/implement/scripts/` anchor on —
+exactly as later phases must produce and check them:
+
+- `## Phases` — the container heading, on its own line
+- `### Phase <n>.` — a phase heading; the number is followed by `.` or
+  whitespace
+- the seven field headings, verbatim, each bold on its own line:
+  `**Becomes true**`, `**Changes**`, `**How**`, `**Do not touch**`,
+  `**Frozen for later phases**`, `**Verification**`, `**Steps**`
+- `## Topology`, and its table columns, in this order and no others:
+  `| Phases | Implementer | Why the boundary is here |`
+- `## Ledger`
+
+## Artifact naming convention
+
+Every file a script derives from a phase range is `<kind>-<first>-<last>.md` —
+`brief-1-3.md`, `dispatch-1-3.md`, `report-1-3.md`. Files not derived from a
+range keep their own names: `gate-a-dispatch.md`, `contracts/<range>.md`,
+`review-<sha>..<sha>.diff`.
+
+## Script names
+
+`brief`, `dispatch`, `plan-check`, all in `skills/implement/scripts/`.

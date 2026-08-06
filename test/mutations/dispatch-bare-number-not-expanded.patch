@@ -1,8 +1,8 @@
-diff --git a/skills/implement/scripts/segment-dispatch b/skills/implement/scripts/segment-dispatch
-index 2523289..60d0e1b 100755
---- a/skills/implement/scripts/segment-dispatch
-+++ b/skills/implement/scripts/segment-dispatch
-@@ -73,7 +73,8 @@ def parse_range(raw):
+diff --git a/skills/implement/scripts/dispatch b/skills/implement/scripts/dispatch
+index 602e03d..7004ee3 100755
+--- a/skills/implement/scripts/dispatch
++++ b/skills/implement/scripts/dispatch
+@@ -77,7 +77,8 @@ def parse_range(raw):
      if m:
          first, last = int(m.group(1)), int(m.group(2))
      elif re.fullmatch(r"\d+", raw):

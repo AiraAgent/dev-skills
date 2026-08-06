@@ -1,7 +1,6 @@
 ---
 name: refactor
-description: Restructure code, or migrate and upgrade, under one contract — the observable behaviour does not change. Invoke when the change of shape is the goal, not a side effect of building something.
-disable-model-invocation: true
+description: Use when changing the shape of code is itself the goal — "refactor this", "clean this up", "migrate us off X", "upgrade to version N", "split this file up". Restructures, migrates or upgrades under one contract: the observable behaviour does not change.
 ---
 
 # Refactoring, migration, upgrade

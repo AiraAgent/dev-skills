@@ -118,8 +118,8 @@ a violation. Skip anything tooling already enforces.
 
 One list, for every seat. This file used to split it — smells visible inside one
 diff, smells visible only once the pieces were assembled — and that was a split
-by segment, written when a reviewer held one segment and could be told which half
-to skip. Whether an entry is visible is a fact about how much of the work the
+by phase range, written when a reviewer held only part of the run and could be
+told which half to skip. Whether an entry is visible is a fact about how much of the work the
 seat holds, not a fact about the smell. Judge what you can see.
 
 - **Mysterious Name** — a name that does not reveal what it does or holds. → rename; if no honest name comes, the design is murky.

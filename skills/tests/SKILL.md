@@ -1,7 +1,6 @@
 ---
 name: tests
-description: Work where the tests are the deliverable — covering untested code, or repairing tests that lie. The contract is red before, green after, proved by commits. Invoke when no production behaviour is meant to change.
-disable-model-invocation: true
+description: Use when the tests themselves are the deliverable — "add tests for this", "cover this code", "these tests are lying", "this test passes but shouldn't". Covers untested code or repairs tests that lie, under one contract: red before, green after, proved by commits, with no production behaviour meant to change.
 ---
 
 # Tests as the goal

@@ -1,7 +1,6 @@
 ---
 name: scout
-description: Map unfamiliar code and answer a specific question about how it works. Read-only — it produces an explanation, never an edit. Invoke before planning in territory you do not know.
-disable-model-invocation: true
+description: Use when the question is how existing code actually works — "explain how this works", "where does this happen", "walk me through this flow", "I don't know this part of the codebase". Maps unfamiliar territory and answers the specific question; read-only, so it produces an explanation and never an edit.
 ---
 
 # Scouting the code
