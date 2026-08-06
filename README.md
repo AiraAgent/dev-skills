@@ -44,8 +44,8 @@ a gate. Nothing is spent and nothing is rewritten until you type the third.
 
 Not every task is a feature. [`dev-skills:bug`](skills/bug/SKILL.md) reproduces
 a symptom and pins it with a failing test before anyone is allowed to propose a
-fix — the one entry Claude may reach for on its own, because the mistake it
-prevents is made in the first reply.
+fix — the one to reach for fastest, because the mistake it prevents is made in
+the first reply.
 [`dev-skills:scout`](skills/scout/SKILL.md) explains unfamiliar code without
 touching it. [`dev-skills:refactor`](skills/refactor/SKILL.md) changes the shape
 of code under a contract that its behaviour does not.
