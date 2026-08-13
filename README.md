@@ -105,6 +105,7 @@ that the pipeline reads as it works. Each one documents its own use inside its
 | [`dev-skills:grill`](skills/grill/SKILL.md) | interview an idea into a shared understanding before anything is planned |
 | [`dev-skills:grill-with-docs`](skills/grill-with-docs/SKILL.md) | grilling that also captures glossary terms and ADRs as they settle |
 | [`dev-skills:guardrails`](skills/guardrails/SKILL.md) | set up Claude Code hooks that block dangerous git commands |
+| [`dev-skills:handoff`](skills/handoff/SKILL.md) | pack this session into a document a fresh agent continues from |
 | [`dev-skills:implement`](skills/implement/SKILL.md) | execute an approved plan, from workspace through both gates |
 | [`dev-skills:improve`](skills/improve/SKILL.md) | scan a codebase for deepening opportunities, then work through one |
 | [`dev-skills:merge-conflicts`](skills/merge-conflicts/SKILL.md) | resolve an in-progress git merge or rebase conflict |
