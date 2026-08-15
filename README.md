@@ -98,6 +98,7 @@ that the pipeline reads as it works. Each one documents its own use inside its
 | Skill | What it's for |
 |---|---|
 | [`dev-skills:bootstrap`](skills/bootstrap/SKILL.md) | injected at session start; states the one rule and lists what exists |
+| [`dev-skills:browser-test`](skills/browser-test/SKILL.md) | drive a web app or an Electron build over CDP, one long-lived tab, precise readouts |
 | [`dev-skills:bug`](skills/bug/SKILL.md) | reproduce a bug, find its root cause, leave behind a failing test that pins it |
 | [`dev-skills:commit-work`](skills/commit-work/SKILL.md) | review and stage changes, split them into logical commits, write clear messages |
 | [`dev-skills:domain-modeling`](skills/domain-modeling/SKILL.md) | build and sharpen a project's glossary, and record an ADR when one is earned |

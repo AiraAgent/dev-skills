@@ -64,7 +64,7 @@ Then the pipeline: `dev-skills:spec` (only when the work needs more than one pla
 the ones described above: you name them, you do not call them.
 
 Outside a run: `dev-skills:review`, `dev-skills:improve`, `dev-skills:research`, `dev-skills:prototype`,
-`dev-skills:domain-modeling`.
+`dev-skills:domain-modeling`, `dev-skills:browser-test`.
 
 `dev-skills:bug` is the one you should be quickest to reach for — a bug arrives as
 a symptom, and the mistake it prevents happens in the first reply.
