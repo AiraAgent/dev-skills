@@ -36,7 +36,7 @@ The skill follows a rigorous 8-step workflow:
 3. **Stage selectively** - Use patch staging (`git add -p`) for granular control
 4. **Review staged changes** - Verify with `git diff --cached`
 5. **Describe changes** - Articulate what changed and why in 1-2 sentences
-6. **Write message** - Craft Conventional Commits format message
+6. **Write message** - Conventional Commits subject, compact body, plain English
 7. **Verify** - Run relevant tests/checks before committing
 8. **Repeat** - Continue until working tree is clean
 
@@ -57,10 +57,14 @@ All commits follow the standard:
 ```
 type(scope): short summary
 
-Detailed body explaining what changed and why.
+Why it changed, plus anything the diff cannot show.
 
 BREAKING CHANGE: if applicable
 ```
+
+The body is optional and capped: 2-4 sentences, one paragraph, plain B1
+English. See `commit-message-template.md` for the word swaps and good/bad
+pairs.
 
 ### Safety Checks
 
@@ -145,10 +149,10 @@ After running, the skill provides:
 
 1. **Review before staging** - Always inspect `git diff` first
 2. **Stage intentionally** - Never use `git add .` or `git add -A`
-3. **Use patch mode** - Leverage `git add -p` for mixed changes
+3. **Use patch mode** - Use `git add -p` for mixed changes
 4. **Verify staged changes** - Check `git diff --cached` before committing
 5. **Keep commits focused** - One logical change per commit
-6. **Write for reviewers** - Explain what/why, not implementation details
+6. **Write for reviewers** - Say why, in plain English, and stop there
 7. **Test before committing** - Run relevant checks after each commit
 
 ## Related Resources

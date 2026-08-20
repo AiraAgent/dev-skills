@@ -45,5 +45,5 @@ if [ -n "$msg" ]; then
 fi
 
 # 4) Clean git commit — inject the commit-work rules as context.
-jq -cn '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"commit-work rules in force: stage only intended changes (verify with git diff --cached), Conventional Commits subject, body says what & why (not a diary), run the fastest relevant check. No Co-Authored-By / Claude footnote / Claude-Session trailer."}}' 2>/dev/null
+jq -cn '{hookSpecificOutput:{hookEventName:"PreToolUse",additionalContext:"commit-work rules in force: stage only intended changes (verify with git diff --cached), Conventional Commits subject <= 72 chars, run the fastest relevant check. Body is optional and compact: skip it when the subject is enough, else 2-4 sentences saying WHY plus what the diff cannot show — never a file list, never the diff read aloud. Simple programming English, B1 level, short active sentences; use/add/remove/fix/so/because, not leverage/utilize/facilitate/thereby/whilst/hence; no marketing adjectives (seamless, robust, comprehensive). Technical terms stay exact. No Co-Authored-By / Claude footnote / Claude-Session trailer."}}' 2>/dev/null
 exit 0
