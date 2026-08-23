@@ -63,7 +63,7 @@ change:
   pattern in the code to point at;
 - **there is no fix loop.** You report, and stop.
 
-Where an originating issue or spec *is* available, judge against it too, and keep
+Where an originating issue or design document *is* available, judge against it too, and keep
 those findings separate from the ones about how the code is written. A change can
 follow every convention and implement the wrong thing; reporting them together
 lets one hide the other.

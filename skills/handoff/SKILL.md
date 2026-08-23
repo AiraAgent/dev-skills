@@ -109,7 +109,7 @@ Every handoff carries these, whichever direction it goes:
   twenty tool calls to rebuild.
 - **Absolute paths** for anything outside the repository — reference checkouts,
   a second repository, a directory named only by convention here.
-- **Link, do not copy.** A spec, a plan, an ADR, the reports of an open run:
+- **Link, do not copy.** An epic, a plan, an ADR, the reports of an open run:
   name the path. Copying it in guarantees the two disagree later.
 - **A rejection only with its reason.** With one it is load-bearing; without one
   it is a list of everything anyone said all day.

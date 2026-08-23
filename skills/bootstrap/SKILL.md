@@ -59,7 +59,7 @@ the request plainly calls for one:
 | `dev-skills:refactor` | restructure, migrate, upgrade — behaviour must not change |
 | `dev-skills:tests` | the tests are the deliverable: cover code, or repair tests that lie |
 
-Then the pipeline: `dev-skills:spec` (only when the work needs more than one plan) →
+Then the pipeline: `dev-skills:epic` (only when the work needs more than one plan) →
 `dev-skills:plan` → `dev-skills:implement` → `dev-skills:finish`. The last two are
 the ones described above: you name them, you do not call them.
 

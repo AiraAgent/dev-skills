@@ -43,7 +43,7 @@ Create files lazily — only when you have something to write. If no `CONTEXT.md
 
 The human invokes it directly, and `dev-skills:grill-with-docs` reaches for it as terms settle. Bare `dev-skills:grill` does not — the whole difference between those two skills is that one leaves a durable artifact and the other does not, and an automatic call here erases it.
 
-Recording a word does not need a spec or a plan of its own. A one-file change that introduces one term gets a glossary entry, and nothing more.
+Recording a word does not need an epic or a plan of its own. A one-file change that introduces one term gets a glossary entry, and nothing more.
 
 ## Where these land
 
@@ -73,7 +73,7 @@ When the user states how something works, check whether the code agrees. If you 
 
 When a term is resolved, update `CONTEXT.md` right there. Don't batch these up — capture them as they happen. Use the format in [CONTEXT-FORMAT.md](./references/CONTEXT-FORMAT.md).
 
-`CONTEXT.md` should be totally devoid of implementation details. Do not treat `CONTEXT.md` as a spec, a scratch pad, or a repository for implementation decisions. It is a glossary and nothing else.
+`CONTEXT.md` should be totally devoid of implementation details. Do not treat `CONTEXT.md` as a design document, a scratch pad, or a repository for implementation decisions. It is a glossary and nothing else.
 
 ### Offer ADRs sparingly
 

@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Write the implementation plan — the contract a cold, cheap implementer builds from. Use when the human moves from working out what to build to writing it down ("write the plan", "переходим к плану"), when a grilling has ended in alignment, or when they name an entry from an existing spec's plan list.
+description: Write the implementation plan — the contract a cold, cheap implementer builds from. Use when the human moves from working out what to build to writing it down ("write the plan", "переходим к плану"), when a grilling has ended in alignment, or when they name an entry from an existing epic's plan list.
 ---
 
 # Writing a plan
@@ -31,31 +31,31 @@ line is absent, add it; do not analyse the variants already there.
 Planning happens where you are. The branch or worktree is created at the start of
 execution, by `dev-skills:implement`, not here.
 
-## Entry with an existing spec
+## Entry with an existing epic
 
-A spec that produced more than one plan makes this skill a starting point of its
+An epic that produced more than one plan makes this skill a starting point of its
 own: the human names an entry from its list and planning begins there. The
-grilling is not repeated — the alignment is already recorded in the spec's
+grilling is not repeated — the alignment is already recorded in the epic's
 *Decisions taken*.
 
 On that entry:
 
-- read the spec whole: decisions, glossary, the plan list with its dependencies;
+- read the epic whole: decisions, glossary, the plan list with its dependencies;
 - check that the entries this one depends on are closed. If they are not, say so
   and do not plan on top of a result that does not exist;
 - plan **only the entry named**. Neighbouring entries do not get pulled in, however
   small they look;
-- **do not reopen the spec's decisions.** If a decision surfaces at plan level
-  that the spec does not contain, stop and propose grilling. Do not settle it
+- **do not reopen the epic's decisions.** If a decision surfaces at plan level
+  that the epic does not contain, stop and propose grilling. Do not settle it
   here.
 
-That last one is the whole boundary between the two levels: the spec holds
+That last one is the whole boundary between the two levels: the epic holds
 decisions, the plan holds mechanics. A planner that settles something on the
-spec's behalf diverges from every other plan in the list, because none of them
+epic's behalf diverges from every other plan in the list, because none of them
 saw it.
 
-Set the entry's state to *in progress* in the spec when the plan is created.
-That, and `dev-skills:finish` marking it *done*, are the only writes to a spec after it
+Set the entry's state to *in progress* in the epic when the plan is created.
+That, and `dev-skills:finish` marking it *done*, are the only writes to an epic after it
 exists.
 
 ## The completeness contract
@@ -66,7 +66,7 @@ dash — the dash is an assertion by the planner, not tidiness.
 | Section | Why | Read by |
 |---|---|---|
 | **Goal** | what we are doing, in your own words | everyone; `dev-skills:finish` derives the commit message from it |
-| **Spec**, or "single-cycle" | where the shared context is, if there is any | everyone |
+| **Epic**, or "single-cycle" | where the shared context is, if there is any | everyone |
 | `Norms:` | the paths that count as an approved source of a convention | the code gate |
 | `Baseline:` | what the mandatory checks produce before any work starts | the code gate |
 | **User stories** | actor, action, outcome — what the work is for | everyone |
@@ -83,11 +83,11 @@ dash — the dash is an assertion by the planner, not tidiness.
 There is **no `Commit` section**. The Goal is enough: the actor assembling the
 commit reads the goal and the result.
 
-Seams live here rather than in the spec, because a spec does not always exist and
+Seams live here rather than in the epic, because an epic does not always exist and
 every plan needs them. Put them to the human as their own question.
 
-The same reason puts the stories and the cases here. A spec exists only when a
-task needs more than one plan; a story that lived only in a spec would have
+The same reason puts the stories and the cases here. An epic exists only when a
+task needs more than one plan; a story that lived only in an epic would have
 nowhere to live in the single-plan case, which is most cases.
 
 ## The skeleton
@@ -101,7 +101,7 @@ Norms: …
 Baseline: …
 
 ## Goal
-## Spec
+## Epic
 ## User stories
 ## Constraints
 ## Out of scope
@@ -581,8 +581,8 @@ check runs again at preflight when `dev-skills:implement` starts, so nothing lef
 here is missed — it is found later instead, when the plan is no longer in front
 of you and the fix costs a stopped run.
 
-Then read the plan against the spec, or against the conversation if there is no
-spec:
+Then read the plan against the epic, or against the conversation if there is no
+epic:
 
 1. **Coverage.** Every story points at a phase, and every phase serves a story.
    List anything on either side that does not.
@@ -611,7 +611,7 @@ Present the plan and take approval before anything is built. Show:
 - the `Norms:` and `Baseline:` lines;
 - that `plan-check` exits `0` on this file, and anything it repaired to get
   there;
-- anything you settled by your own judgement rather than from the spec.
+- anything you settled by your own judgement rather than from the epic.
 
 Then ask:
 
@@ -688,7 +688,7 @@ worktree here.
 
 ## What is not in a plan
 
-- product decisions — they are in the spec, and the plan does not reopen them;
+- product decisions — they are in the epic, and the plan does not reopen them;
 - function bodies, test code, imports and style — typing, not decisions;
 - commit text — derived from the Goal at finish;
-- the other plans in the spec's list — each is planned when the human names it.
+- the other plans in the epic's list — each is planned when the human names it.

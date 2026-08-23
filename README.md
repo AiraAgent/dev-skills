@@ -102,6 +102,7 @@ that the pipeline reads as it works. Each one documents its own use inside its
 | [`dev-skills:bug`](skills/bug/SKILL.md) | reproduce a bug, find its root cause, leave behind a failing test that pins it |
 | [`dev-skills:commit-work`](skills/commit-work/SKILL.md) | review and stage changes, split them into logical commits, write clear messages |
 | [`dev-skills:domain-modeling`](skills/domain-modeling/SKILL.md) | build and sharpen a project's glossary, and record an ADR when one is earned |
+| [`dev-skills:epic`](skills/epic/SKILL.md) | write the epic that holds a body of work too large for one plan |
 | [`dev-skills:finish`](skills/finish/SKILL.md) | close out a run into one commit and hand it to the human |
 | [`dev-skills:grill`](skills/grill/SKILL.md) | interview an idea into a shared understanding before anything is planned |
 | [`dev-skills:grill-with-docs`](skills/grill-with-docs/SKILL.md) | grilling that also captures glossary terms and ADRs as they settle |
@@ -118,7 +119,6 @@ that the pipeline reads as it works. Each one documents its own use inside its
 | [`dev-skills:review`](skills/review/SKILL.md) | review code against the same criteria the pipeline's own gates use |
 | [`dev-skills:review-criteria`](skills/review-criteria/SKILL.md) | the shared standard for what counts as a review finding |
 | [`dev-skills:scout`](skills/scout/SKILL.md) | map unfamiliar code and answer a specific question about it, read-only |
-| [`dev-skills:spec`](skills/spec/SKILL.md) | write the spec that holds a body of work too large for one plan |
 | [`dev-skills:tdd`](skills/tdd/SKILL.md) | the red-green-refactor discipline the implementer builds by |
 | [`dev-skills:tests`](skills/tests/SKILL.md) | cover untested code, or repair tests that lie |
 | [`dev-skills:writing-great-skills`](skills/writing-great-skills/SKILL.md) | design, audit, or edit a skill so it behaves predictably |

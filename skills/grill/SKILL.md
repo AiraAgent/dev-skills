@@ -7,8 +7,8 @@ description: Use when a task is still fuzzy and needs talking through before any
 
 Turn an idea into a design both of you actually agree on, through questions.
 
-The output is **alignment**, and then a stop. No spec file, no plan, no code. If
-the work turns out to need more than one plan, `dev-skills:spec` writes the document; if
+The output is **alignment**, and then a stop. No epic file, no plan, no code. If
+the work turns out to need more than one plan, `dev-skills:epic` writes the document; if
 it needs one, the alignment lands in that plan's header.
 
 **Announce at start:** "Using dev-skills:grill to work out what we are building."
@@ -33,7 +33,7 @@ skill only the human can call.
 Present the design, take approval, then **stop** and say what the next step is:
 
 - the work fits one plan → the human invokes `dev-skills:plan`;
-- the work needs several → the human invokes `dev-skills:spec`, which writes the shared
+- the work needs several → the human invokes `dev-skills:epic`, which writes the shared
   document and the list of plans.
 
 **You invoke neither.** The human decides when to move on, and how much process

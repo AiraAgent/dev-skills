@@ -141,7 +141,7 @@ check_out=$("$repo_root/scripts/check" 2>&1)
 check_rc=$?
 [ "$check_rc" -eq 0 ] || fail "TC-9: scripts/check should pass, got exit $check_rc: $check_out"
 
-for skill in grill grill-with-docs plan spec scout refactor tests improve; do
+for skill in grill grill-with-docs plan epic scout refactor tests improve; do
   fm=$(frontmatter "$repo_root/skills/$skill/SKILL.md")
   ! printf '%s' "$fm" | grep -qi 'disable-model-invocation' \
     || fail "TC-9: skills/$skill/SKILL.md should carry no disable-model-invocation"

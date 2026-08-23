@@ -51,9 +51,21 @@ the user stories, the constraints, what is out of scope, what the final gate
 proves, the test seams, the paths and existing abstractions, the test cases),
 the **phase**s under `## Phases`, a `## Topology` table, and a `## Ledger`.
 
-_Avoid_: spec, design doc, ticket
+_Avoid_: epic, design doc, ticket
 
 ## The Documents
+
+### Epic
+
+The file `dev-skills:epic` writes to `.ai-workflow/epics/YYYY-MM-DD-<topic>.md`
+— the document that holds a body of work too large for one **plan**. Carries
+the decisions every plan below it follows and none may reopen, the shared
+glossary, the integration invariants no single plan's verification can reach,
+and the list of plans with the dependencies between them. Exists only when the
+work produces more than one **plan**; most work produces one, and then there is
+no epic.
+
+_Avoid_: spec, design doc, ticket, epic doc
 
 ### Brief
 
@@ -62,7 +74,7 @@ header plus the phases in its assigned range, and nothing else. Cut by the
 `brief` script; hard-stops on a plan with no `## Phases`. Named by the
 **artifact naming convention** below.
 
-_Avoid_: instructions, spec, ticket
+_Avoid_: instructions, epic, ticket
 
 ### Dispatch
 
@@ -212,9 +224,18 @@ _Avoid_: judgement call, choice
 
 ## Retired
 
-Both words survive only here, as retired entries, so a reader meeting one in
+These words survive only here, as retired entries, so a reader meeting one in
 an old document knows it is dead rather than assuming it still means
 something.
+
+### Spec
+
+Retired. Named what an **epic** now names, and the `## Spec` heading a **plan**
+now spells `## Epic`. Renamed to stop it colliding with OpenSpec and the other
+spec-driven frameworks: the document was never a specification of behaviour, it
+was always an epic — a body of work split into plans.
+
+_Avoid_: — retired; do not use it in a new artifact
 
 ### Segment
 

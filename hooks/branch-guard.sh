@@ -9,7 +9,7 @@
 # any more: dev-skills:domain-modeling offers, the human decides, and this exemption only
 # means the guard does not stand in the way once they have.
 #
-# Exception: .ai-workflow/** — git-ignored scratch (specs, plans, run
+# Exception: .ai-workflow/** — git-ignored scratch (epics, plans, run
 # workspaces). The grilling and the plan are written before the branch exists, and
 # nothing under there can reach a commit, so blocking them buys no isolation.
 

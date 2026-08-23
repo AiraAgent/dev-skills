@@ -164,9 +164,9 @@ it in so many words.
 
 ## 6. Afterwards
 
-**Mark the spec entry done.** If the plan names a spec, set that entry's state to
+**Mark the epic entry done.** If the plan names an epic, set that entry's state to
 *done* in the plan list. Together with `dev-skills:plan` setting *in progress*, those are
-the only two writes to a spec after it exists.
+the only two writes to an epic after it exists.
 
 **Close the run:**
 
@@ -183,7 +183,7 @@ removes only a worktree under `.worktrees/` or `worktrees/` — one this workflo
 created. A worktree the host environment owns is never touched. On "leave as is",
 nothing is removed at all.
 
-**The artifacts stay.** The spec and the plan remain in `.ai-workflow` after
+**The artifacts stay.** The epic and the plan remain in `.ai-workflow` after
 integration. There is no automatic cleanup: deletion is irreversible and disk is
 cheap, so deciding what is no longer needed stays with the human.
 
